@@ -43,7 +43,8 @@ source("../R/set-global.R")
 source("../R/xfun.R", encoding = "UTF-8")
 source("../R/external-math-equation.R")
 options(width = 70)
-#source("../R/xaringan-chromote-print.R")
+# for bib reference
+source("../R/ref-bib.R")
 ```
 
 ```{r xaringan-logo, echo=FALSE}
@@ -240,7 +241,7 @@ layout: true
 
 ---
 
-## 参考教材
+### 参考教材《效应：研究设计与因果性概论》
 
 - Huntington-Klein N.  The effect: an introduction to research design and causality[M]. Boca Raton, FL:CRC Press, 2022. （[online free](https://theeffectbook.net/)）
 
@@ -249,21 +250,80 @@ include_graphics("../pic/chpt00-text-nick-cover.png")
 ```
 
 
+.footnote[
+
+可参看配套的代码资源：[github repo](https://github.com/NickCH-K/causaldata)
+
+]
 
 ---
 
-## 参考教材
+### 参考教材《因果推断：锦盒》
 
-- [1]Cunningham S.  Causal Inference: The Mixtape[M]. Yale University Press, 2021.（可以参看外文出版商的[书籍网页](https://www.scunning.com/mixtape.html)）
+- Cunningham S.  Causal Inference: The Mixtape[M]. Yale University Press, 2021.（可以参看外文出版商的[书籍网页](https://www.scunning.com/mixtape.html)）<sup>a</sup>
 
 ```{r, out.width='250px'}
 include_graphics("../pic/chpt00-text-scott-cover.jpg")
 ```
 
-???
+.footnote[
 
-> **提示**：原版已经更新，Hillier F S, Gerald L J.  Introduction to operations research[M]，第11版. Dubuque: McGraw-Hill, 2020.
+<sup>a</sup> 可参看配套“Causal Inference: The Mixtape”`r Citep(bib, "cunningham2021")`的在线资源：[github repo](https://github.com/scunning1975/mixtape)
 
+]
+
+
+---
+
+### 参考教材《反事实和因果推断》
+
+- Morgan S L, Winship C.  Counterfactuals and causal inference: methods and principles for social research[M]. 第2nd版. New York, NY: Cambridge University Press, 2014.
+
+
+```{r, out.width='250px'}
+include_graphics("../pic/chpt00-text-CF-cover.jpg")
+```
+
+---
+
+### 参考教材《精通"测度"：原因-效果路径》
+
+- Angrist J D, Pischke J-S.  Mastering ’Metrics: The Path from Cause to Effect[M]. Princeton, Oxford: Princeton University Press, 2015.
+
+
+```{r, out.width='250px'}
+include_graphics("../pic/chpt00-text-MM-cover.jpg")
+```
+
+---
+
+### 参考教材《影响评估实践应用》
+
+- Gertler P, Martinez Wilde S, Premand P, Rawlings L, Vermeersch C. Inter-American Development Bank.  Impact evaluation in practice[M]. 第2nd版.  Washington, DC: World Bank Group, 2016.<sup>a</sup>
+
+```{r, out.width='250px'}
+include_graphics("../pic/chpt00-text-IE-cover.jpg")
+```
+
+.footnote[
+<sup>a</sup> 可以参看相关[在线资源](https://evalsp20.classes.andrewheiss.com/)
+
+]
+
+
+
+---
+
+## 在线资源
+
+
+在线learning sources:
+
+- online book chapter "13 Experiments and Quasi-Experiments"（[see](https://www.econometrics-with-r.org/13-eaqe.html)）
+
+- "Chapter 12 Regression Discontinuity: Looking for Jumps in Data" （[see](https://bookdown.org/carillitony/bailey/chp11.html#same-slope)）
+
+- 在线课程"program evaluation"。[课程网址](https://evalsp20.classes.andrewheiss.com/schedule/)。chapter Regression discontinuity I & II（[链接](https://evalsp20.classes.andrewheiss.com/class/11-class/)）。有视频有R案例和代码。
 
 
 ---
@@ -469,6 +529,46 @@ DT::datatable(lab)
 .footnote[.red[**注意**：<sup>*</sup> 
 - 实验作业发布和提交全部在学校**在线教育综合平台**完成！请尽快登陆课程网站，确认自己登陆进去。
 - 每次作业发布都会有开始和截至时间，系统会自动记录，过期不候，不交作业则没有相应实验成绩（实验成绩占最终课程成绩的30%）。]
+]
+
+
+---
+layout: false
+class: center, middle, duke-orange,hide_logo
+name: reference-ch01
+
+# 本章参考文献
+
+---
+layout: true
+
+<div class="my-header-h2"></div>
+
+<div class="watermark1"></div>
+
+<div class="watermark2"></div>
+
+<div class="watermark3"></div>
+
+<div class="my-footer"><span>huhuaping@  &emsp;&emsp; <a href="#chapter"> 第00章 课程说明 </a>
+&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
+<a href="#reference-ch01"> 本章参考文献 </a> </span></div> 
+
+---
+
+### 参考文献（References）
+
+.page-font-22[
+
+```{r, results='asis', echo=FALSE}
+
+#RefManageR::PrintBibliography(bib)
+
+# also we can use custom function
+print_bib_rmd(bib, start = 1)
+
+```
+
 ]
 
 ---

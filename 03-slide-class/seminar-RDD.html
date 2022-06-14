@@ -34,7 +34,7 @@ exclude: FALSE
 
 ### huhuaping01@hotmail.com
 
-### 2022-06-10
+### 2022-06-12
 
 
 
@@ -256,10 +256,33 @@ D=
 
 我们有理由认为，在边境线两边的家庭几乎是相同的，除了边境线。 但是，距离更远的人(比如圣地亚哥San Diego市中心vs.墨西哥境内更远的人)可能会因为边界以外的原因而有所不同。 带宽就是您愿意考虑的可比较的边境线两边附近的空间范围。距离美墨边境线各10英尺? 各1000英尺? 各80英里? 
 
+---
+
+### RDD是如何能够分析因果关系？——随机实验控制
+
+.notes[
+
+- **随机实验控制**（Random experiment control）：也称为随机对照实验，可以通过严格控制其他影响因素的变动，而准确分析特定一个影响因素对结果变量
+`\(Y\)`的作用。绝大部分自然科学研究都基于这一实验设计理念。
+
+&gt; 
+
+- **局部随机性实验**（Local Randomized
+experiment）：在某些情形下，全局性（global）的随机对照实验难以满足或事实，但是却可以在局部范围内（local）进行近似随机的对照实验([Hausman and Rapson, 2018](https://doi.org/10.1146/annurev-resource-121517-033306))。
+
+]
 
 ---
 
-### RDD是如何能够分析因果关系？
+### RDD是如何能够分析因果关系？——随机实验控制
+
+.case[
+**分数与录取案例**：
+]
+
+---
+
+### RDD是如何能够分析因果关系？——断点与局部随机
 
 .pull-left[
 
@@ -281,7 +304,7 @@ D=
 ]
 
 
-- 图a)展示的是真实的数据生成机制（DGP）。因为**混淆变量**
+- 图a)展示的是常见的数据生成机制（DGP）。因为**混淆变量**
 `\(U\)`的存在，使得难以有效分析出**处置变量**
 `\(D\)`对**结果变量**
 `\(Y\)`的作用关系（影响效应）。
@@ -293,10 +316,29 @@ D=
 
 ---
 
+### 因果图的绘制
+
+
+&lt;img src="seminar-RDD_files/figure-html/unnamed-chunk-4-1.png" style="display: block; margin: auto;" /&gt;
+
+.footnote[
+
+- [DAG制图可参看](https://evalf20.classes.andrewheiss.com/example/dags/)
+]
+
+---
+
 ### RDD框架需要满足的假设条件有哪些？——连续性假设
 
 
 **假设1**：**结果变量**的期望值在**断点**处需要满足**连续性假设**（continuity assumption）：
+
+- **结果变量**的期望值在**断点**处连续，也即
+`\(E[Y_i(1)|X_i = x]\)`和
+`\(E[Y_i(0)|X_i = x]\)`，可是作为
+`\(x\)`的函数（
+`\(f(x)\)`），且在
+`\(x=c_0\)`出连续。（见下图）
 
 - **断点**值
 `\(c_0\)`本身需要满足**外生性**（exogeneity）条件。也即，**断点**值
@@ -353,15 +395,44 @@ D=
 
 **假设3：断点效应的局部性假设**（the local nature of RD effect）。
 
+
+---
+layout: false
+class: center, middle, duke-orange,hide_logo
+name: reference-ch02
+
+# 本章参考文献
+
+---
+layout: true
+
+&lt;div class="my-header-h2"&gt;&lt;/div&gt;
+
+&lt;div class="watermark1"&gt;&lt;/div&gt;
+
+&lt;div class="watermark2"&gt;&lt;/div&gt;
+
+&lt;div class="watermark3"&gt;&lt;/div&gt;
+
+&lt;div class="my-footer"&gt;&lt;span&gt;huhuaping@  &amp;emsp;&amp;emsp; &lt;a href="#chapter"&gt; 第00章 课程说明 &lt;/a&gt;
+&amp;emsp;&amp;emsp;&amp;emsp;&amp;emsp;&amp;emsp;&amp;emsp;&amp;emsp;&amp;emsp;&amp;emsp;&amp;emsp;&amp;emsp;&amp;emsp;&amp;emsp;&amp;emsp;&amp;emsp;&amp;emsp;&amp;emsp;&amp;emsp;&amp;emsp;&amp;emsp;&amp;emsp;&amp;emsp;&amp;emsp;&amp;emsp;&amp;emsp;&amp;emsp;
+&lt;a href="#reference-ch02"&gt; 本章参考文献 &lt;/a&gt; &lt;/span&gt;&lt;/div&gt; 
+
 ---
 
-## 参考文献（References）
+### 参考文献（References）
 
 .page-font-22[
 
 &lt;a name=bib-cattaneo2021&gt;&lt;/a&gt;[Cattaneo, M. D. and R.
 Titiunik](#cite-cattaneo2021) (2021). "Regression
 Discontinuity Designs" , p. 48.
+
+&lt;a name=bib-hausman2018&gt;&lt;/a&gt;[Hausman, C. and D. S.
+Rapson](#cite-hausman2018) (2018). "Regression Discontinuity
+in Time: Considerations for Empirical Applications". In:
+_Annual Review of Resource Economics_ 10.1, pp. 533-552. DOI:
+[10.1146/annurev-resource-121517-033306](https://doi.org/10.1146%2Fannurev-resource-121517-033306).
 
 &lt;a name=bib-thistlethwaite1960&gt;&lt;/a&gt;[Thistlethwaite, D. L. and
 D. T. Campbell](#cite-thistlethwaite1960) (1960).
@@ -370,6 +441,13 @@ Post Facto Experiment." In: _Journal of Educational
 psychology_ 51.6, p. 309.
 
 ]
+
+---
+layout:false
+background-image: url("../pic/thank-you-gif-funny-fan.gif")
+class: inverse, center
+
+# 本章结束
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>

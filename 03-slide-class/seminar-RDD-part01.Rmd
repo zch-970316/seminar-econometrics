@@ -1,0 +1,1499 @@
+---
+params:
+  hideslide: FALSE
+output:
+  xaringan::moon_reader:
+    seal: false
+    lib_dir: libs
+    css:
+      - default
+      - ../mycss/my-theme.css 
+      - ../mycss/my-font.css
+      - ../mycss/my-custom-for-video-roomy.css
+      - ../mycss/text-box.css
+      - duke-blue
+      - hygge-duke
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: "16:9"
+---
+background-image: url("../pic/slide-front-page.jpg")
+class: center,middle
+exclude: `r params$hideslide`
+
+# 高级计量暑期班</br></br>(Seminar of Advanced Econometrics)
+
+<!---    chakra: libs/remark-latest.min.js --->
+
+### 胡华平
+
+### 西北农林科技大学
+
+### 经济管理学院数量经济教研室
+
+### huhuaping01@hotmail.com
+
+### `r Sys.Date()`
+
+
+```{r , echo=F,message=FALSE,warning=F, eval=!params$hideslide}
+source("../R/set-global.R")
+source("../R/xfun.R", encoding = "UTF-8")
+source("../R/external-math-equation.R")
+options(width = 70)
+# for bib reference
+source("../R/ref-bib.R")
+
+# for tools
+library(extrafont)
+library(ggpubr)
+library(gghighlight)
+library(cowplot)
+library(modelsummary)
+library(rdrobust)
+library(fixest)
+library(broom)
+
+# for text matched material
+library("causaldata") # https://github.com/NickCH-K/causaldata/tree/main/R
+```
+
+```{r xaringan-logo, echo=FALSE}
+require('xaringanExtra')
+
+xaringanExtra::use_tachyons()
+
+xaringanExtra::use_panelset()
+
+xaringanExtra::use_logo(
+  image_url = "../pic/logo/nwafu-logo-circle-wb.png",
+  height = '70px',
+  position = xaringanExtra::css_position(top='0.2em',left="1em")
+)
+```
+
+
+
+
+
+---
+class: center, middle, duke-orange,hide_logo
+name:chapter-RDD
+
+# 断点回归设计（RDD）
+
+### 1.RDD原理是什么？(How Does It Work?)
+
+### 2.RDD该如何实施？(How Is It Performed?)
+
+### 3.RDD怎样高级进阶？(How the Pros Do It?)
+
+---
+layout: false
+class: center, middle, duke-orange,hide_logo
+name: principal
+
+# 1.RDD原理是什么？</br></br>(How Does It Work?)
+
+
+---
+layout: true
+
+<div class="my-header-h2"></div>
+
+<div class="watermark1"></div>
+
+<div class="watermark2"></div>
+
+<div class="watermark3"></div>
+
+<div class="my-footer"><span>huhuaping@  &emsp;&emsp; <a href="#chapter-RDD">  </a>
+&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
+<a href="#principal"> 1.RDD原理是什么？ </a> </span></div> 
+
+---
+
+### 引子：地理区隔与收入变化
+
+.case[
+
+**示例**：
+
+- 圣地亚哥(San Diego)是美国南部一个大城市，占地面积超过300平方英里。 它也很富裕，截至2019年，家庭平均年收入超过85000美元，比全国平均水平高出约50%。
+
+- 当您向南进入城市的其他区域时，一些南部地区的收入会少一些。例如用，当你往南到达的圣伊西德罗(San Ysidro)地区时（靠近墨西哥边境），家庭收入已经下降到50000-55000美元左右。你越往南走，期望家庭收入就越低。
+
+- 但是，当我们越过边境进入墨西哥的蒂华纳(Tijuana, Mexico)时会发生什么？一旦越过边境进入墨西哥的蒂华纳(Tijuana)。 你会发现家庭收入，突然和急剧地下降到20000美元左右。
+
+]
+
+---
+
+### 引子：地理区隔与收入变化
+
+.fyi[
+
+**思考**：
+
+- 我们从圣地亚哥(San Diego)市中心开车到南部区域圣伊西德罗(San Ysidro)，只有16英里距离，收入下降了25%。但是，只要继续往南步行几英尺越过边境进入墨西哥境内的蒂华纳(Tijuana, Mexico)，家庭收入则发生急剧下降。
+
+- 当然，对于圣地亚哥南部的家庭，地理位置可能有所不同，这可以解释收入的一些差异。但是在边界线附近两端，家庭收入会出现显著跳跃，这是地理位置因素所难以解释的。
+
+]
+
+---
+
+### RDD的典型分析情形
+
+
+---
+
+### 相关概念定义：RDD（一句话解释）
+
+断点回归设计（.red[R]egression .red[D]iscontinued .red[D]esign, RDD）：
+
+.notes[
+
+> RDD是一种用于检验**因果关系**（causal relationship）假设的分析方法`r Citep(bib, "thistlethwaite1960")`
+
+]
+
+---
+
+### 相关概念定义：RDD（复杂一点的解释）
+
+RDD主要用于如下情形`r Citep(bib,"cattaneo2021")`：
+
+.notes[
+
+- 被研究对象（units）上可以观测到一个**运行变量**（running variable）
+
+- 基于某些规则（rule）研究者可以给出运行变量上的一个（或若干个）**断点值**（cutoff），并据此对所有被研究对象设定**分配水平**（assignment level）：包括**处置条件**（treatment condition）和**控制条件**（control condition）。
+
+- 在断点值以上的被研究对象将被分配**处置条件**（treatment condition），并被定义为**处置组**（treated group）；在断点值以下的被研究对象将被分配**控制条件**（control condition），并被定义为**控制组**（controlled group）
+
+- 在满足某些**假设条件**下，断点附近处置条件分配概率的断点式变化，可以揭示出**处置条件**对**结果变量**（目标变量）的因果关系。
+
+]
+
+
+---
+
+### 相关概念定义：结果变量、运行变量、混淆变量
+
+- **结果变量（output variable）**：研究的目标变量，一般记为
+$Y$
+
+> 例如，结果变量为观测到的病人是否猝死。
+  
+- **运行变量(Runing variable)**<sup>a</sup>：是一个可以观测得到的变量。一方面它将决定被研究对象（units）是否被处置（treated）；另一方面它本身也会影响到结果变量。一般记为
+$X$
+
+> 例如，医生测量病人的血压，如果收缩压高于135，医生会给病人开降压药，这里病人的血压就是运行变量。
+
+
+- **混淆变量(Confound variable)**：是哪些不能被直接观测得到的变量，它们可能会同时影响到**运行变量**（进而干扰到马上要定义的**处置变量**）以及**结果变量**。一般记为
+$U$
+
+
+.footnote[
+
+<sup>a</sup> 也被称为分派变量（assigning variable），或者强制变量（forcing variable）
+
+]
+ 
+---
+
+### 相关概念定义：断点和处置变量
+
+
+- **断点（Cutoff）**：是运行变量中的一个具体取值，根据它的取值我们可以来决定对象是否需要处置。 这一取值一般记为
+$X=c_0$
+
+> 以血压为例，假定断点值设置为收缩压135。如果你的血压高于135，就应该吃药。 如果低于135，就无须吃药。
+
+- **处置变量（Treatment variable）**： 根据运行变量和断点值的关系，定义得到的关于是否要分配处置水平的虚拟变量。一般定义为：
+
+
+$$\begin{align}
+D=
+  \begin{cases}
+  0 \quad \text{if} \quad X< c_0 \\
+  1 \quad \text{if} \quad X  \geq c_0 
+  \end{cases}
+\end{align}$$
+
+
+
+> 例如，给定运行变量
+$X$为病人血压，断点值为
+$c_0=135$，那么处置变量即为**是否用药**。具体地，所有血压值
+$\quad X  \geq c_0$的病人都会进行**用药处置**，也即虚拟变量赋值
+$D=1 \quad (\text{if} \quad X  \geq c_0)$；否则就**不用药**，虚拟变量赋值为0。
+
+---
+
+### 相关概念定义：谱宽
+
+- **谱宽**(Band width)：是断点值附近的一个**邻域**的区间范围的长度，一般记为
+$h$，此时这个领域的区间范围定义为
+$b \equiv [c_0-h, c_0 +h], \quad \text{and} \quad h >0$
+
+.case[
+**示例**：
+
+- 研究者可以任意给定运行变量（血压）的一个**谱宽**为
+$h=10$，则**断点值**附近的一个**邻域**的区间范围为
+$b \equiv [c_0-h, c_0 +h]=[135-10, 135 +10]=[125, 145]$
+
+]
+
+???
+
+我们有理由认为，在边境线两边的家庭几乎是相同的，除了边境线。 但是，距离更远的人(比如圣地亚哥San Diego市中心vs.墨西哥境内更远的人)可能会因为边界以外的原因而有所不同。 带宽就是您愿意考虑的可比较的边境线两边附近的空间范围。距离美墨边境线各10英尺? 各1000英尺? 各80英里? 
+
+---
+
+### RDD是如何能够分析因果关系？——随机控制实验
+
+.notes[
+
+- **随机控制实验**（Randomized controlled experiments）：也称为随机对照实验，可以通过严格控制其他影响因素的变动，而准确分析特定一个影响因素对结果变量
+$Y$的作用。绝大部分自然科学研究都基于这一实验设计理念。
+
+> 
+
+- **准自然实验**（Quasi-experiment or Natural experiment）：对于社会科学家而言，严格的随机控制实验往往无法获得或极难实施。但是在特定条件下，也还是可以得到某种“近似”（as if）随机性的数据生成机制（DGP）。
+
+> 
+
+- **局部随机性实验**（Local randomized
+experiment）：在某些情形下，全局性（global）的随机对照实验难以满足或事实，但是却可以在局部范围内（local）进行近似随机的对照实验`r Citep(bib, "hausman2018")`。
+
+]
+
+---
+
+### RDD是如何能够分析因果关系？——随机实验控制
+
+.case[
+**分数与录取案例**：
+]
+
+
+---
+exclude: true
+
+### 因果图的绘制
+
+
+```{r}
+require("ggdag")
+require("dagitty")
+
+income_dag <- dagify(
+  post_income ~ program + age + sex + pre_income,
+  program ~ age + sex + pre_income,
+  exposure = "program",
+  outcome = "post_income",
+  labels = c(post_income = "Post income",
+             program = "Program",
+             age = "Age",
+             sex = "Sex",
+             pre_income = "Pre income"),
+  coords = list(
+    x = c(program = 1, post_income = 5, 
+          age = 2, sex = 4, pre_income = 3),
+    y = c(program = 2, post_income = 2, 
+          age = 1,  sex = 1, pre_income = 3)))
+
+ggdag_status(income_dag, use_labels = "label", 
+             text = FALSE, seed = 1234) + 
+  guides(color = FALSE) +
+  theme_dag()
+```
+
+.footnote[
+
+- [DAG制图可参看](https://evalf20.classes.andrewheiss.com/example/dags/)
+]
+
+---
+
+### RDD是如何能够分析因果关系？——断点与局部随机
+
+.pull-left[
+
+```{r}
+#| fig.cap="a)数据生成机制DGP",
+#| out.height =200 
+pic_path <- "../pic/chpt02-RD-DGG01.jpg"
+include_graphics(pic_path)
+```
+
+]
+
+
+.pull-right[
+
+```{r}
+#| fig.cap="b)RDD因果关系解析",
+#| out.height =200 
+pic_path <- "../pic/chpt02-RD-DGG02.jpg"
+include_graphics(pic_path, dpi = 150 )
+```
+
+]
+
+
+- 图a)展示的是常见的数据生成机制（DGP）。因为**混淆变量**
+$U$的存在，使得难以有效分析出**处置变量**
+$D$对**结果变量**
+$Y$的作用关系（影响效应）。
+
+- 图b)展示的是在RDD框架下，研究者能够很大程度上剥离**混淆变量**
+$U$的干扰，并有效分析出**处置变量**
+$D$对**结果变量**
+$Y$的作用关系（影响效应）。
+
+---
+
+### RDD是如何能够分析因果关系？——可观测事实与反事实
+
+**可观测事实**（observed facts）：在给定研究对象某种分配条件下（例如处置条件或控制条件），可以分别得到处置组对象（treated group， **T**）和控制组对象（controlled group, **C**），就能分别观测到结果变量的表现，也即**可观测事实**。
+
+> **可观测结果**（observed outcome）：此时，处置组和控制组的结果变量容易被观测得到，分别可记为
+$[Y_i^1\mid D=1]$以及
+$[Y_i^0\mid D=0]$
+
+**反事实**（Counterfactual）：对于.red[处置组]的研究对象，如果不给它们分配处置条件，那么它们的结果变量会是如何呢？同理，对于.red[控制组]的研究对象，如果给它们分配处置条件，那么它们的结果变量又会是如何呢？显然，这些都是假想情形，实际并未发生的事实。
+
+> **潜在结果**（Potential outcome）：此时，处置组和控制组的结果变量不能被直接观测得到，表现为**潜在结果**，我们分别可记为
+$[Y_i^0\mid D=1]$以及
+$[Y_i^1\mid D=0]$
+
+---
+exclude: true
+
+## Code script: Hensen bruce fig 21.1
+
+- 此代码仅用于生成本地图片，为提高渲染效率代码文件仅需运行一次。
+
+- 如更新代码，请更改`eval = TRUE`
+
+```{r, eval=FALSE}
+source("../Rscript/hansen21-fig21-1a.R", encoding = "UTF-8")
+```
+
+
+
+---
+
+### 图形演示：可观测事实与反事实
+
+```{r}
+#| out.height = 500
+pic_path <- "../pic/HANSEN21-1a-outcome.png"
+knitr::include_graphics(pic_path)
+
+```
+
+
+---
+
+### RDD是如何能够分析因果关系？——可观测事实与反事实
+
+- 处置组对象的结果变量的期望：
+
+$$\begin{align}
+E(Y_i^1\mid X_i=x) & \equiv 
+E\left(Y_i^1\mid X_i\geq c_0\right) + E(Y_i^1 \mid X_i < c_0)   \\
+& \equiv E\left(Y_i^1\mid D=1\right) + E(Y_i^1 \mid D=0) \\
+& \equiv E\left(Y^1\mid c^+\right) + E(Y^1 \mid c^-)
+\end{align}$$
+
+- 控制组对象的结果变量的期望：
+
+$$\begin{align}
+E(Y_i^0\mid X_i=x) & \equiv 
+E\left(Y_i^0\mid X_i\geq c_0\right) + E(Y_i^0 \mid X_i < c_0)   \\
+& \equiv E\left(Y_i^0\mid D=1\right) + E(Y_i^0 \mid D=0) \\
+& \equiv E\left(Y^0\mid c^+\right) + E(Y^0 \mid c^-)
+\end{align}$$
+
+- 处置变量对结果变量的因果效应：
+
+$$\begin{align}
+\tau &= E(Y_i^1\mid X_i=x)  - E(Y_i^0\mid X_i=x)  \\
+&= \left[ E\left(Y^1\mid c^+\right) + E(Y^1 \mid c^-) \right] -
+\left[ E\left(Y^0\mid c^+\right) + E(Y^0 \mid c^-) \right]
+\end{align}$$
+
+
+---
+
+### RDD是如何能够分析因果关系？——可观测事实与反事实
+
+- 处置条件下结果变量（可观测的和潜在的）的期望：
+
+$$\begin{align}
+& \equiv E\left(Y_i^1\mid X_i\geq c_0\right) + E(Y_i^0 \mid X_i \geq c_0)   \\
+& \equiv E\left(Y_i^1\mid D=1\right) + E(Y_i^0 \mid D=1) \\
+& \equiv E\left(Y^1\mid c^+\right) + E(Y^0 \mid c^+)
+\end{align}$$
+
+- 控制条件下结果变量（可观测的和潜在的）的期望：
+
+$$\begin{align}
+& \equiv E\left(Y_i^1\mid X_i < c_0\right) + E(Y_i^0 \mid X_i < c_0)   \\
+& \equiv E\left(Y_i^1\mid D=0\right) + E(Y_i^0 \mid D=0) \\
+& \equiv E\left(Y^1\mid c^- \right) + E(Y^0 \mid c^-)
+\end{align}$$
+
+- 处置变量对结果变量的因果效应：
+
+$$\begin{align}
+\tau &= 
+\left[ E\left(Y^1\mid c^+\right) + E(Y^0 \mid c^+) \right] -
+\left[ E\left(Y^1\mid c^- \right) + E(Y^0 \mid c^-) \right]
+\end{align}$$
+
+---
+
+### RDD是如何能够分析因果关系？——可观测事实与反事实
+
+```{r}
+#| out.height = 500
+pic_path <- "../pic/chpt02-assumption-continuity.jpg"
+include_graphics(pic_path)
+```
+
+---
+
+### RDD框架需要满足的假设条件有哪些？——连续性假设
+
+
+**假设1**：**结果变量**的期望值在**断点**处需要满足**连续性假设**（continuity assumption）：
+
+- **结果变量**的期望值在**断点**处连续，也即
+$E[Y_i(1)|X_i = x]$和
+$E[Y_i(0)|X_i = x]$，可是作为
+$x$的函数（
+$f(x)$），且在
+$x=c_0$出连续。（见下图）
+
+- **断点**值
+$c_0$本身需要满足**外生性**（exogeneity）条件。也即，**断点**值
+$c_0$在触发**处置变量**D的时候，不会有**其他变量**在同时期来干预这种“触发行为”。
+
+- 在上述条件下，运行变量
+$X$对结果变量
+$Y$将**不再**具有直接影响（
+$X \rightarrow Y$），而是通过处置变量
+$D$发生间接作用（
+$X \rightarrow D \rightarrow Y$）。
+
+- **连续性假设**（continuity assumption）应该是RDD**最关键**的一个假设条件，而且这符合**经验事实**。
+
+> .blue[**大自然不会跳跃！**<sup>[a]</sup>  ---达尔文《物种起源》]
+
+.footnote[
+
+<sup>[a]</sup> 事物的发展变化总是**渐进式**的，而不会陡然改变。常言道“量变引发质变”。
+
+]
+
+---
+
+### RDD框架需要满足的假设条件有哪些？——连续性假设
+
+
+```{r}
+#| out.height = 500
+pic_path <- "../pic/chpt02-assumption-continuity.jpg"
+include_graphics(pic_path)
+```
+
+---
+
+### RDD框架需要满足的假设条件有哪些？——断点性假设
+
+**假设2**：被研究对象被分配（assign）.red[处置条件]（treated condition）<sup>[1]</sup>的**条件概率**（Conditional Probability of Receiving Treatment）
+$P(D_i= 1 \mid X_i=c_0)$在断点处是**不连续的**（也即间断的）。
+
+常见的处置分配概率不连续**模式**包括：
+
+- **骤变不连续**（Sharp discontinuity）：处置条件分配的概率在断点处被完全决定。
+
+- **模糊不连续**（Fuzzy discontinuity）：处置条件分配的概率在断点处**不能**被完全决定。
+
+.footnote[
+
+<sup>[1]</sup> 回顾**分配水平**（assign level）具有两个水平：处置条件（treated condition）和控制条件（controlled condition）
+
+]
+
+---
+exclude: true
+
+### RDD框架需要满足的假设条件有哪些？——断点性假设
+
+```{r}
+#| out.height = 380
+pic_path <- "../pic/chpt02-assumption-discontinueity.jpg"
+include_graphics(pic_path)
+```
+
+---
+exclude: true
+
+## 模拟断点处置
+
+```{r}
+tib <- tibble(x = c(0,.5,.5,1),
+              y = c(0,0,1,1))
+p1 <- ggplot(tib, aes(x = x, y = y)) + geom_path() +
+  labs(x = 'Running Variable X', y ='Proportion Treated',
+       title = 'a)骤变不连续Sharp Design') +
+  geom_vline(aes(xintercept = 0.5), linetype = 'dashed', color = 'green') +
+  scale_y_continuous(labels = function(x) scales::percent(x, accuracy = 1)) +
+  scale_x_continuous(breaks = .5, labels = 'Cutoff') +
+  theme_pubr() +
+  theme(text = element_text(family = 'Garamond', size = 14))
+
+tib2 <- tibble(x = (-2500:0)/2500) %>%
+  mutate(treatrate = (x+x^2+x^3)/2 + .5 + .5*(x > -.5))
+
+p2 <- ggplot(tib2, aes(x = x, y = treatrate)) + geom_line()+
+  labs(x = 'Running Variable X', y ='Proportion Treated',
+       title = 'b)模糊不连续Fuzzy Design')+
+  geom_vline(aes(xintercept = mean(x)), linetype = 'dashed', color = 'green')  +
+  scale_y_continuous(labels = function(x) scales::percent(x, accuracy = 1)) +
+  scale_x_continuous(breaks = -.5, labels = 'Cutoff') +
+  theme_pubr() +
+  theme(text = element_text(family = 'Garamond', size = 14))
+```
+
+
+---
+
+### 断点性假设图示1/2：骤变（Sharp）不连续
+
+```{r}
+p1
+```
+
+- 处置条件的骤变（Sharp）不连续示例：小学入学年龄严格要求出生日期（
+$X$）在
+$c_0=9月1日$之前。
+
+---
+
+### 断点性假设图示2/2：模糊（Fuzzy）不连续
+
+
+```{r}
+p2
+```
+
+
+- 处置条件的模糊（Fuzzy）不连续：小学入学年龄要求出生日期（
+$X$）在
+$X \in [8月1日,9月30日]$期间，家长可以自己选择孩子是否上小学。
+
+
+---
+
+### RDD框架需要满足的假设条件有哪些？——局部断点效应假设
+
+**假设3：断点效应的局部性假设**（the local nature of RD effect）。
+
+
+---
+exclude: true
+
+## Code script: 模拟数据RDD过程
+
+
+```{r}
+set.seed(1000)
+tb <- tibble(x = runif(100)) %>%
+  mutate(y = x + 2*sqrt(x) + 2*(x>.5) + rnorm(100)) %>%
+  group_by(x > .5) %>%
+  mutate(pred = predict(loess(y~x))) %>%
+  ungroup()
+
+size_point <- 3
+size_text <- 16
+
+p1 <- ggplot(tb, aes(x= x, y = y)) +
+  geom_point(size=size_point) +
+  geom_vline(aes(xintercept = .5), linetype = 'dashed') +
+  labs(x = 'Running Variable X',
+       y = 'Outcome Y',
+       title = 'a) 原始数据') +
+  theme_pubr() +
+  theme(text = element_text(size = size_text, family="Garamond"),
+        axis.text = element_blank(),
+        axis.ticks = element_blank())
+
+p2 <- ggplot(tb, aes(x= x, y = y, group = x > .5)) +
+  geom_point(size=size_point) +
+  geom_vline(aes(xintercept = .5), linetype = 'dashed') +
+  geom_smooth(aes(x = x, y = pred), se = FALSE, color = 'blue', size = 1.5) +
+  labs(x = 'Running Variable X',
+       y = 'Outcome Y',
+       title = 'b) 断点附近拟合') +
+  theme_pubr() +
+  theme(text         = element_text(size = size_text, family="Garamond"),
+        axis.text = element_blank(),
+        axis.ticks = element_blank())
+
+p3 <- ggplot(tb, aes(x= x, y = y, group = x > .5)) +
+  geom_point(size=size_point) +
+  geom_vline(aes(xintercept = .5), linetype = 'dashed') +
+  geom_vline(aes(xintercept = .55), linetype = 'dashed', color = 'green') +
+  geom_vline(aes(xintercept = .45), linetype = 'dashed', color = 'green') +
+  gghighlight(abs(x - .5) < .05) +
+  geom_smooth(aes(x = x, y = pred), se = FALSE, color = 'orange', size = 1.5) +
+  labs(x = 'Running Variable X',
+       y = 'Outcome Y',
+       title = 'c)选定一个谱宽Bandwidth') +
+  theme_pubr() +
+  theme(text         = element_text(size = size_text, family="Garamond"),
+        axis.text = element_blank(),
+        axis.ticks = element_blank())
+```
+
+- 参考来源：[github](https://github.com/NickCH-K/causaldata)
+
+---
+
+### RDD的基本过程
+
+如果暂时忽略各种细节，一个最简化的RDD分析过程包括：
+
+- 设定断点两边对结果变量的预测模型方法（predictive model）。
+
+- 选择局部谱宽（bandwidth）。
+
+- 估计并计算因果效应。
+
+---
+
+### RDD的基本过程图示1/4：原始数据
+
+```{r}
+p1
+```
+
+---
+
+### RDD的基本过程图示2/4：断点两边拟合
+
+```{r}
+p2
+```
+
+- 这里采用了**LOESS**方法拟合局部均值（local mean）
+
+---
+
+### RDD的基本过程图示3/4：选定一个谱宽Bandwidth
+
+```{r}
+p3
+```
+
+
+- 我们暂时不关心远离断点处的观测值（因为混淆变量会产生作用）
+
+- 最优化的谱宽选择可以基于某些准则，例如BIC等
+
+
+---
+
+### RDD的基本过程图示4/4：断点处估计因果效应
+
+```{r}
+p4 <- ggplot(tb, aes(x= x, y = y, group = x > .5)) +
+  geom_point(size=size_point) +
+  geom_vline(aes(xintercept = .5), linetype = 'dashed') +
+  annotate(geom = 'segment', x = .5, xend = .5,
+           y = tb %>% filter(x <= .5) %>% filter(x == max(x)) %>% pull(pred),
+           yend = tb %>% filter(x > .5 & x <= .55) %>% pull(pred) %>% mean(),
+           size = 1.5, linetype = 'solid', color="red") +
+  gghighlight(abs(x - .5) < .05) +
+  geom_smooth(aes(x = x, y = pred), se = FALSE, color = 'orange', size = 1.5) +
+  labs(x = 'Running Variable X',
+       y = 'Outcome Y',
+       title = 'd) 断点处估计因果效应') +
+  theme_pubr() +
+  theme(text         = element_text(size = size_text, family="Garamond"),
+        axis.text = element_blank(),
+        axis.ticks = element_blank())
+
+p4
+```
+
+
+- 谱宽范围内、断点两边的估计结果，表现出了“跳跃”效果（jumps）
+
+---
+layout: false
+class: center, middle, duke-orange,hide_logo
+name: perform
+
+# 2.RDD该如何实施？</br></br>(How Is It Performed?)
+
+
+---
+layout: true
+
+<div class="my-header-h2"></div>
+
+<div class="watermark1"></div>
+
+<div class="watermark2"></div>
+
+<div class="watermark3"></div>
+
+<div class="my-footer"><span>huhuaping@  &emsp;&emsp; <a href="#chapter-RDD">  </a>
+&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
+<a href="#perform"> 2.RDD该如何实施？ </a> </span></div> 
+
+---
+
+### 符号表达体系
+
+- 结果变量
+$Y$
+
+- 运行变量
+$X$，断点值
+$c_0$
+
+- 处置变量
+$D$：
+
+$$\begin{align}
+D=
+  \begin{cases}
+  0 \quad \text{if} \quad X< c_0 \\
+  1 \quad \text{if} \quad X  \geq c_0 
+  \end{cases}
+\end{align}$$
+
+- 实验组对象**T**
+$(D=1)$；控制组对象**C**
+$(D=0)$
+
+---
+
+### 个体结果变量与随机个体处置效应
+
+
+```{r}
+#| out.height = 500
+pic_path <- "../pic/HANSEN21-1a-outcome.png"
+knitr::include_graphics(pic_path)
+```
+
+---
+
+### 个体结果变量与随机个体处置效应
+
+- 当个体
+$i$被分配为“处置条件”时，其结果变量为
+$Y_1$为；当个体
+$i$被分配为“控制条件”时，其结果变量为
+$Y_0$。
+
+- 此时，个体
+$i$的**处置效应**(treatment effect)记为
+$\theta=Y_1 -Y_0$，因为其具有随机性，也被称为**随机处置效应**(random treatment effect)
+
+- 给定一个可观测的协变量
+$X$（运行变量），我们可以得到个体
+$i$的**条件处置效应**(conditional treatment effect)，并记为：
+
+$$\theta |(X=x)=(Y_1 -Y_0)|(X=x)$$
+
+
+- 对于
+$X=x$处的多个个体，我们可以得到它们的条件**平均处置效应**（average treatment effect, ATE），并记为：
+
+$$\theta(x) \equiv \mathbb{E}(\theta \mid X=x)$$
+
+---
+
+### 结果变量的条件期望函数及其假设
+
+```{r}
+#| out.height = 500
+pic_path <- "../pic/HANSEN21-1a-outcome-expect.png"
+knitr::include_graphics(pic_path)
+
+```
+
+
+
+---
+
+### 结果变量的条件期望函数及其假设
+
+给定结果变量的**条件期望函数**(conditional expect function, CEF)<sup>a</sup>如下：
+
+$$m(x) \equiv \mathbb{E}(Y|X=x)$$
+
+则可以分别得到**控制条件**和**处置条件**下的**条件期望函数**：
+
+$$\begin{align}
+  \begin{cases}
+    m_0(x) = \mathbb{E}(Y_0|X=x)\\
+    m_1(x) = \mathbb{E}(Y_1|X=x)
+  \end{cases}
+\end{align}$$
+
+进而，我们可以把**条件平均处置效应**(conditional ATE)表达为：
+
+$$\begin{align}
+\theta(x) &\equiv \mathbb{E}(\theta \mid X=x) \\
+& = \mathbb{E}[(Y_1 -Y_0) \mid X=x] \\
+& = \mathbb{E}[(Y_1\mid X=x ) -(Y_0\mid X=x)] \\
+& = m_1(x)  -m_0(x) 
+\end{align}$$
+
+.footnote[
+
+<sup>a</sup> 这里先表达为**隐函数**形式，也即其具体函数表达式未知。
+]
+
+---
+
+### 结果变量的条件期望函数及其假设
+
+结果变量的条件期望函数在断点处的**连续性**（continuity）假设：
+
+> 给定断点值为
+$x=c$，假设结果变量的条件期望函数
+$m(x)$在断点处
+$x=c$连续。
+
+> 这也意味着在*控制条件**和**处置条件**下的**条件期望函数**也在断点处是连续的。也即
+$m_0(x)$和
+$m_1(x)$在断点处
+$x=c$连续。
+
+
+**定义**：我们把条件函数的
+**极限**（
+$z$从右边向
+$x$值取极限，和
+$z$从左边向
+$x$值取极限）定义如下
+
+$$\begin{align}
+m(x+)&=\lim_{z \downarrow x} m(z)\\
+m(x-)&=\lim_{z \uparrow x} m(z)
+\end{align}$$
+
+---
+
+### 断点处置效应定理：定理表达
+
+**断点处置效应**定理：给定处置分配规则为
+$D=1\{X \geq c\}$，而且假定结果变量满足断点处的连续性假设，也即结果变量的条件期望函数
+$m(x)$在断点处
+$x=c$连续，那么**断点处置效应**为：
+
+$$\bar{\theta}=\lim_{z \downarrow c} m(z) - \lim_{z \uparrow c} m(z)=m(c+)-m(c-)$$
+
+---
+
+### 断点处置效应定理：定理证明
+
+**证明**：首先，我们进一步定义结果变量：
+
+$$\begin{align}
+Y \equiv Y_0 \cdot\mathbb{1}\{x<c\} + Y_1 \cdot\mathbb{1}\{x\geq c\}
+\end{align}$$
+
+两边对
+$X=x$取期望，且根据结果变量的条件期望函数的定义，则有：
+
+$$\begin{align}
+\mathbb{E}(Y|X=x) &= \mathbb{E}(Y_0|X=x) \cdot\mathbb{1}\{x<c\} + \mathbb{E}(Y_1|X=x) \cdot\mathbb{1}\{x\geq c\} \\ 
+\Rightarrow m(x) &= m_0(x)\cdot\mathbb{1}\{x<c\} + m_1(x) \cdot\mathbb{1}\{x\geq c\} 
+\end{align}$$
+
+根据前面关于**条件处置效应**的定义及**连续性假设**，则有：
+
+.pull-left[
+$$\begin{align}
+\theta(x) &\equiv \mathbb{E}(\theta \mid X=x) \\
+& = \mathbb{E}[(Y_1 -Y_0) \mid X=x] \\
+& = \mathbb{E}[(Y_1\mid X=x ) -(Y_0\mid X=x)] \\
+& = m_1(x)  -m_0(x) 
+\end{align}$$
+]
+
+.pull-rgith[
+$$\begin{align}
+\theta(c) &=  m_1(c)  -m_0(c) \\
+&= \lim_{x\downarrow c}{m(x)} - \lim_{x\uparrow c}{m(x)}  &&\leftarrow \text{(连续性假设)} \\
+& = m(c+) - m(c-)
+\end{align}$$
+]
+
+---
+
+### 骤变断点情形（Sharp discontinuity）的估计：1/3
+
+**断点回归设计**（RDD）属于典型的**边界估计**（boundary estimation）问题，这里我们将优先采用**局部线性回归**（local linear regression, LLR）方法进行估计。
+
+> 这里，我们将使用到非参数的**核函数**（kernel  function）方法来除了回归的权重问题。
+
+给定如下条件：
+
+- 变量集
+
+$$\begin{align}
+Z_{i}(x)=\left(
+  \begin{array}{c}
+  \mathbb{1} \\
+  X_{i}-x
+  \end{array}
+\right)
+\end{align}$$
+
+
+- 核函数（kernel function）
+$K(u)$
+
+- 谱宽（bandwidth）
+$h$
+
+
+
+---
+
+### 骤变断点情形（Sharp discontinuity）的估计：2/3
+
+此时，可以证明**局部线性**方法下的系数估计为（证明略）：
+
+- 对于断点左侧
+$x < c$，系数估计为<sup>a</sup>：
+
+$$\begin{align}
+\boldsymbol{\widehat{\beta}_{0}}(x)=\left(\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right) Z_{i}(x) Z_{i}(x)^{\prime}\cdot \mathbb{1}\left\{X_{i}<c\right\}\right)^{-1}\left(\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right) Z_{i}(x) Y_{i}\cdot \mathbb{1}\left\{X_{i}<c\right\}\right)
+\end{align}$$
+
+- 对于断点左侧
+$x \geq c$，系数估计为<sup>b</sup>：
+
+$$\begin{align}
+\boldsymbol{\widehat{\beta}_{1}}(x)=\left(\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right) Z_{i}(x) Z_{i}(x)^{\prime} \cdot\mathbb{1}\left\{X_{i} \geq c\right\}\right)^{-1}\left(\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right) Z_{i}(x) Y_{i} \cdot\mathbb{1}\left\{X_{i} \geq c\right\}\right)
+\end{align}$$
+
+.footnote[
+
+<sup>a</sup> <sup>b</sup> 需要注意的是，这里我们得到的都是系数向量（vector）。
+
+]
+
+---
+
+### 骤变断点情形（Sharp discontinuity）的估计：3/3
+
+根据结果变量条件期望函数
+$m(x)$的定义，我们可以使用上述系数估计
+$\boldsymbol{\widehat{\beta}_{0}}(x),\boldsymbol{\widehat{\beta}_{1}}(x)\}$，进一步得到结果变量条件期望函数的估计结果<sup>a</sup>：
+
+$$\begin{align}
+\widehat{m}(x)=\left[\boldsymbol{\widehat{\beta}_{0}}(x)\right]_{1} \cdot  \mathbb{1}\{x<c\}+\left[\boldsymbol{\widehat{\beta}_{1}}(x)\right]_{1} \cdot \mathbb{1}\{x \geq c\}
+\end{align}$$
+
+因此，根据**断点处置效应定理**，可以得到在断点
+$x=c$处对总体效应
+$\bar{\theta}$的样本估计结果
+$\hat{\theta}$：
+
+$$\begin{align}
+\widehat{\theta}=\left[\boldsymbol{\widehat{\beta}_{1}}(c)\right]_{1}-\left[\boldsymbol{\widehat{\beta}_{0}}(c)\right]_{1}=\hat{m}(c+)-\widehat{m}(c-)
+\end{align}$$
+
+.footnote[
+
+<sup>a</sup> 条件期望函数CEF只需要用到系数向量（vector）的第一个元素，因此用了下标<sub>1</sub>表达。
+
+]
+
+---
+exclude: true
+
+## Code script: Hansen "Head Start case"
+
+- 此代码仅用于生成本地图片，为提高渲染效率代码文件仅需运行一次。
+
+- 如更新代码，请更改`eval = TRUE`
+
+```{r, eval=TRUE}
+source("../Rscript/hansen21-fig21_1b.R", encoding = "UTF-8")
+```
+
+
+---
+
+### 示例：援助项目与儿童死亡率
+
+.pull-left[
+
+```{r}
+#| out.height = 500
+pic_path <- "../pic/HANSEN21-1b-rdd.png"
+knitr::include_graphics(pic_path)
+```
+
+]
+
+.pull-right[
+
+- 谱宽设定为
+$h = 8$，断点值设定为
+$c =59.1984\%$。
+
+- 断点处置效应估计值为
+$\hat{\theta}=`r number(theta,0.01)`$。
+
+.small[
+> 
+- 断点左边的条件期望(CEF)的估计值
+$\widehat{m}(c-)=`r m1[G1]`$；
+- 断点右边的条件期望(CEF)的估计值
+$\widehat{m}(c+)=`r m2[1]`$；
+- 断点估计效应
+$\hat{\theta}=\widehat{m}(c+)- \widehat{m}(c-)=`r number(theta,0.01)`$
+
+]
+
+- RDD结果表明援助项目降低了儿童死亡率，使得10万个孩子中约1.51个小孩免于遭受死亡。
+
+]
+
+---
+
+### RDD推断（inference）：理论估计偏误和方差
+
+基于**局部线性回归**LLR估计结果，对断点处置效应参数
+$\bar{\theta}$的推断陈述（inferential statement），都会受到其中**非参数估计**偏差的影响。
+
+可以证明，**局部线性回归**（LLR）的估计量
+$\hat{m}(x)$在**标准正则条件**（standard regularity conditions）下将服从**渐近正态分布**。
+
+- 此时，RDD估计量
+$\hat{\theta}$的渐近偏误（bias）和渐近方差分别为：
+
+$$\begin{align}
+\operatorname{bias}[\widehat{\theta}]
+&=\frac{h^{2} \sigma_{K^{*}}^{2}}{2}\left(m^{\prime \prime}(c+)-m^{\prime \prime}(c-)\right)\\
+\operatorname{var}[\widehat{\theta}]
+&=\frac{R_{K}^{*}}{n h}\left(\frac{\sigma^{2}(c+)}{f(c+)}+\frac{\sigma^{2}(c-)}{f(c-)}\right)
+\end{align}$$
+
+---
+
+### RDD推断（inference）：样本方差
+
+上述理论方差，我们可以通过两个**边界回归**（断点两边）的系数估计量的**渐近方差**求和计算得到。我们首先给定如下条件：
+
+- 变量集：
+
+$$\begin{align}
+Z_{i}=\left(
+  \begin{array}{c}
+  \mathbb{1} \\
+  X_{i}-c
+  \end{array}
+\right)
+\end{align}$$
+
+
+- **核函数**（kernel function）
+$K_i=k\left(\frac{X_i - c}{h}\right)$
+
+- **谱宽**（bandwidth）
+$h$
+
+- **留一法**<sup>a</sup>得到的模型预测**残差**（leave-one-out prediction error）
+$\tilde{e}_i$
+
+.footnote[
+
+<sup>a</sup> **留一法**(Leave One Out, LOO) 是一种 常见的交叉验证方法，其中每个观察集都被视为验证集test，其余的
+$(n-1)$观测值被视为训练集training。此处原理类似，每次都去掉一个数据进行估计，然后根据估计结果进行预测，然后得到预测误差。
+]
+
+---
+
+### RDD推断（inference）：样本方差
+
+此时，我们可以得到**局部线性回归**LLR估计系数
+$\hat{\theta}$的**方差协方差矩阵**分别为：
+
+$$\begin{aligned}
+&\widehat{\boldsymbol{V}}_{0}=\left(\sum_{i=1}^{n} K_{i} Z_{i} Z_{i}^{\prime} \cdot  \mathbb{1}\left\{X_{i}<c\right\}\right)^{-1}\left(\sum_{i=1}^{n} K_{i}^{2} Z_{i} Z_{i}^{\prime} \tilde{e}_{i}^{2} \cdot  \mathbb{1}\left\{X_{i}<c\right\}\right)\left(\sum_{i=1}^{n} K_{i} Z_{i} Z_{i}^{\prime} \cdot  \mathbb{1}\left\{X_{i}<c\right\}\right)^{-1} \\
+&\widehat{\boldsymbol{V}}_{1}=\left(\sum_{i=1}^{n} K_{i} Z_{i} Z_{i}^{\prime} \cdot  \mathbb{1}\left\{X_{i} \geq c\right\}\right)^{-1}\left(\sum_{i=1}^{n} K_{i}^{2} Z_{i} Z_{i}^{\prime} \tilde{\boldsymbol{e}}_{i}^{2} \cdot  \mathbb{1}\left\{X_{i} \geq c\right\}\right)\left(\sum_{i=1}^{n} K_{i} Z_{i} Z_{i}^{\prime} \cdot \mathbb{1}\left\{X_{i} \geq c\right\}\right)^{-1}
+\end{aligned}$$
+
+进一步地，估计系数
+$\hat{\theta}$的渐进方差为上述两个矩阵第一个对角元素之和：
+
+$$\text{Var}{(\hat{\theta})}=\left[\widehat{\boldsymbol{V}}_{0}\right]_{11}+\left[\widehat{\boldsymbol{V}}_{1}\right]_{11}$$
+
+---
+
+### （示例）援助项目与儿童死亡率：LLR估计与标准差
+
+- 断点处置效应估计值为
+$\hat{\theta}=`r number(theta,0.01)`$。
+
+- 其标准差计算为
+$s(\hat{\theta})=`r number(setheta,0.01)`$
+
+- 使用t统计量进行显著性检验，可以得到t统计量为
+$t^{\ast}= \frac{\hat{\theta}}{s(\hat{\theta})}=\frac{`r number(theta,0.01)`}{`r number(setheta,0.01)`}=`r number(tstat,0.01)`$
+
+- t统计量对应的概率值为：
+$p=`r number(pvalue, 0.0001)`$
+
+
+**结论**：援助项目的实施，显著地减低了儿童死亡率，使得10万个孩子中约1.51个小孩免于遭受死亡。相比不实施项目援助，儿童死亡率由`r m1[G1]`，显著下降到`r m2[1]`，降幅接近50%。
+
+
+---
+
+### RDD谱宽选择（bandwidth selection）：基本问题
+
+.notes[
+
+- 基于**边界估计**的**局部线性回归**方法本质上需要进行**非参数估计**，这尤其体现在核函数的**谱宽**（bandwidth）估计。
+
+- 目前还没有达成一致意见的最优谱宽选择方法。因此在进行LLR估计之前，研究者不得不多尝试多种**数据导向**（data based）的谱宽选择工具。
+
+- 谱宽估计是一项具有挑战性的工作，有些具体估计方法会异常复杂。
+
+]
+
+当然，这里可以建议使用两种谱宽选择方法：
+
+- **多项式**(polynomial, PN)谱宽选择法`r Citep(bib, "fan1996")`：这是一种经验方法。
+
+- **交叉验证**（cross validation, CV）谱宽选择法
+
+---
+
+### RDD谱宽选择（bandwidth selection）：多项式法
+
+- 首先构造包含
+$q$阶多项式和断点漂移项的模型：
+
+$$\begin{align}
+m(x)=\beta_{0}+\beta_{1} x+\beta_{2} x^{2}+\cdots+\beta_{q} x^{q}+\beta_{q+1} D
+\end{align}$$
+
+- 然后，通过估计得到的条件期望函数
+$\widehat{m}(x)$计算二阶求导结果：
+
+$$\begin{align}
+\widehat{m}^{\prime \prime}(x)=2 \widehat{\beta}_{2}+6 \widehat{\beta}_{3} x+12 \widehat{\beta}_{4} x^{2}+\cdots+q(q-1) \widehat{\beta}_{q} x^{q-2}
+\end{align}$$
+
+- 再计算常量
+$\overline{B}$，其中
+$[\xi_1, \xi_2]$是运行变量
+$X$内部的一个评价区间：
+
+$$\begin{align}
+\widehat{B}=\frac{1}{n} \sum_{i=1}^{n}\left(\frac{1}{2} \widehat{m}^{\prime \prime}\left(X_{i}\right)\right)^{2} \mathbb{1}\left\{\xi_{1} \leq X_{i} \leq \xi_{2}\right\}
+\end{align}$$
+
+
+- 最后，对于任意**正规化核**（normalized kernel），可以计算得到**谱宽**：
+
+$$\begin{align}
+h_{\text{FG}}=0.58 \cdot \left(\frac{\widehat{\sigma}^{2}\left(\xi_{2}-\xi_{1}\right)}{\widehat{B}}\right)^{1 / 5} n^{-1 / 5}
+\end{align}$$
+
+---
+
+### RDD谱宽选择（bandwidth selection）：多项式法
+
+根据核函数的不同，多项式法(polynomial)计算公式略有不同：
+
+- 对于**非规化矩形核**（un-normalized rectangular kernel）
+$K(u)=1/2, \text {for} |u|\leq 1$：
+
+$$\begin{align}
+h_{\text{pn}}=1\cdot \left(\frac{\widehat{\sigma}^{2}\left(\xi_{2}-\xi_{1}\right)}{\widehat{B}}\right)^{1 / 5} n^{-1 / 5}
+\end{align}$$
+
+- 对于**非规化三角核**（un-normalized rectangular kernel）
+$K(u)=1-|u|, \text {for} |u|\leq 1$：
+
+$$\begin{align}
+h_{\text{pn}}=1.42\cdot \left(\frac{\widehat{\sigma}^{2}\left(\xi_{2}-\xi_{1}\right)}{\widehat{B}}\right)^{1 / 5} n^{-1 / 5}
+\end{align}$$
+
+
+---
+
+### RDD谱宽选择（bandwidth selection）：交叉验证法
+
+.notes[
+
+- **交叉验证**（cross validation, CV）方法：主要形式是把训练集分成两部分，一部分用来训练模型，另一部分用来验证模型。
+
+- **交叉验证**方法包括：**留出法**（holdout）、**留一法**（Leave-one-out,
+LOO）、K折法（K-fold）、**自助法**（Bootstrap）等。
+
+- 这里介绍的**交叉验证**谱宽选择法主要采用**留一法**（Leave-one-out,LOO）。
+]
+
+**留一法**（Leave-one-out,LOO）选择谱宽的基本步骤：
+
+- 初步选定一个临近断点的区间
+$[\xi_1, \xi_2]$（去中心化后centered X的范围）
+
+- 任意选择初始谱宽
+
+- 通过**留一法**计算模型预测残差及其**残差平方和**
+
+- 以**最小化**残差平方和为目标，分析谱宽的变化趋势<sup>a</sup>，并最终确定谱宽bandwidth。
+
+
+.footnote[
+
+<sup>a</sup> 可以绘制CV标准（如均方误差AMSE）与谱宽关系的图示法进行观察。
+
+]
+
+
+---
+
+### RDD谱宽选择（bandwidth selection）：方法评析
+
+
+- 谱宽估计的噪点（noise）会进入到RDD估计进程中去，因此谱宽选择显得非常重要。
+
+- 无论是**多项式法**还是**交叉验证法**，确定最终谱宽时，都考虑到了**全局性**准确度。
+
+.fyi[
+> 这意味着它们都用到了更多的样本数据，因此谱宽估计会比较稳定。
+]
+
+- 另一种**局部性**的谱宽选择方法，主要考察**断点**附近(near-by)的准确度。
+
+.fyi[
+
+> 因为局部性存在多种可能，所以这类方法得到的谱宽会更加不稳定。具体参看`r Citep(bib,c('imbens2012c','arai2018'))`。
+
+]
+
+- 通过**改变**谱宽值，来对RDD估计进行**稳健性检查**是很必要的。
+
+.fyi[
+> 更大的谱宽，一般会使得断点效应估计系数**方差减小**(reduce variance)，置信区间变窄，但同时也会**增加偏误**(increase bias)。
+
+]
+
+---
+
+### RDD谱宽选择（bandwidth selection）：方法评析
+
+.fyi[
+
+谱宽选择的**经验法则**：
+
+- 实践操作中，我们往往需要同时结合**多项式法**和**交叉验证法**来确定一个谱宽
+$\tilde{h}$。
+
+- 在上述基础上，我们还需要适当调减谱宽值，例如
+$h = 25\%\cdot\tilde{h}$，以减少估计偏误。
+
+]
+
+---
+
+### （示例）援助项目与儿童死亡率：谱宽选择
+
+
+- 我们先采用**多项式法**，尝试的多项式阶数包括
+$q \in (2,3,4)$，分别计算得到了谱宽值为
+$h_{pn} \in c(24.6, 11.0,5.2)$。
+
+- 我们继续尝试使用**交叉验证法**（CV），并在选定区域
+$[\xi_1, \xi_2]=[1,30]$上进行谱宽估计和选择。谱宽值结果发现，CV法建议的谱宽值
+$h_{cv}$应该越大越好。
+
+- 基于上述两种方法的分析，我们认为还是应该慎重地采纳**多项式法**的谱宽建议值。最终决定使用3阶和4阶多项式结果的平均谱宽值，也即：
+
+$$h=\frac{h_{pn}(q=3) +h_{FC}(q=3)}{2}\approx 8$$
+
+---
+
+### RDD协变量分析：基本问题
+
+- 回顾**断点处置效应**定理：
+
+> 给定处置分配规则为
+$D=1\{X \geq c\}$，而且假定结果变量满足断点处的连续性假设，也即结果变量的条件期望函数
+$m(x)$在断点处
+$x=c$连续，那么**断点处置效应**为：
+
+$$\bar{\theta}=m(c+)-m(c-)$$
+
+.fyi[
+
+- 根据前面的讨论，就效应**估计**和**推断**而言，RDD分析中完全没有必要引入其他协变量（
+$Z$）进入模型。
+
+- 当然，为了提高模型预测**准确度**，我们可以引入一些额外的、有价值的协变量。
+
+]
+
+---
+
+### RDD协变量分析：符号表达
+
+- 给定变量集为：
+$(Y,X,Z)$，其中
+$Z$为含有
+$k$个元素的协变量向量（covariates vector）
+
+- 同前，
+$Y_0$和
+$Y_1$分别为**控制条件**和**处置条件**下的**结果变量**（观测的或反事实的）
+
+- 并进一步假定条件期望函数CEF是如下的**线性形式**，且断点两边的方程中协变量系数是相同的
+$\beta^{\prime}$：
+
+$$\begin{align}
+&\mathbb{E}\left[Y_{0} \mid X=x, Z=z\right]=m_{0}(x)+\beta^{\prime} z \\
+&\mathbb{E}\left[Y_{1} \mid X=x, Z=z\right]=m_{1}(x)+\beta^{\prime} z
+\end{align}$$
+
+- 那么，结果变量
+$Y$的条件期望函数CEF将可以表达为：
+
+$$\begin{align}
+m(x, z)=m_{0}(x) \cdot \mathbb{1}\{x< c\}+m_{1}(x) \cdot \mathbb{1}\{x \geq c\}+\beta^{\prime} z 
+\end{align}$$
+
+- 此时，可以证明**断点处置效应**结果为：
+
+$$\overline{\theta} = m(c+,z) - m(c-,z)$$
+
+---
+
+### RDD协变量分析：估计方法
+
+RDD协变量估计方法有很多种，这里重点讨论`r Citep(bib, 'robinson1988')`提出了一种**半参数效率**估计方法，主要步骤如下：
+
+- **步骤1**：直接采用前面的RDD局部线性回归方法（LLR），用
+$Y_i$对
+$X_i$进行回归，并得到第1阶段的**结果变量**的拟合值
+$\widehat{m}_i = \widehat{m}_i(X_i)$
+
+- **步骤2**：如上，依次做
+$Z_{i1}$对
+$X_i$、
+$Z_{i2}$对
+$X_i$、
+$\ldots$的回归，并分别得到**协变量**的拟合值
+$\widehat{g}_{1i},\widehat{g}_{2i},\ldots,\widehat{g}_{ki}$
+
+- **步骤3**：做
+$Y_i -m_{i}$对
+$Z_{i1}-\widehat{g}_{1i},Z_{i2}-\widehat{g}_{2i},\ldots,Z_{ik}-\widehat{g}_{ki}$的回归，并得到**估计系数**
+$\hat{\beta}$及其**标准误**
+
+- **步骤4**：构造残差
+$\hat{e}_i=Y_i - Z^{\prime}_i\hat{\beta}$
+
+- **步骤5**：再次采用RDD局部线性回归方法（LLR），进行
+$\hat{e}_i$对
+$X_i$的回归，并计算得到非参数估计量
+$\widehat{m}(x)$，断点效应估计值
+$\hat{\theta}$及其标准误。
+
+
+---
+layout: false
+class: center, middle, duke-orange,hide_logo
+name: reference-ch02
+
+# 本章参考文献
+
+---
+layout: true
+
+<div class="my-header-h2"></div>
+
+<div class="watermark1"></div>
+
+<div class="watermark2"></div>
+
+<div class="watermark3"></div>
+
+<div class="my-footer"><span>huhuaping@  &emsp;&emsp; <a href="#chapter"> 第00章 课程说明 </a>
+&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
+<a href="#reference-ch02"> 本章参考文献 </a> </span></div> 
+
+---
+class: remark-slide-content.roomy
+
+
+### 参考文献（References）：1/2
+
+.page-font-22[
+
+```{r, results='asis', echo=FALSE}
+
+#RefManageR::PrintBibliography(bib)
+
+# also we can use custom function
+print_bib_rmd(bib, start = 1, stop = 5)
+
+```
+
+]
+
+---
+class: remark-slide-content.roomy
+
+
+### 参考文献（References）：2/2
+
+.page-font-22[
+
+```{r, results='asis', echo=FALSE}
+
+#RefManageR::PrintBibliography(bib)
+
+# also we can use custom function
+print_bib_rmd(bib, start = 6)
+
+```
+
+]
+
+
+---
+layout:false
+background-image: url("../pic/thank-you-gif-funny-fan.gif")
+class: inverse, center
+
+# 本章结束
