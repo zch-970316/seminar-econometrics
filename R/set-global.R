@@ -32,7 +32,7 @@ options(servr.daemon = TRUE) # unlock thread when infinite moon render
 library('rmarkdown')
 library('bookdown')
 library('knitr')
-library('xlsx')
+#library('xlsx')
 library("openxlsx")
 require("here")
 #install.packages('tidyr')

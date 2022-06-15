@@ -1,6 +1,4 @@
 ---
-params:
-  hideslide: FALSE
 output:
   xaringan::moon_reader:
     seal: false
@@ -21,7 +19,6 @@ output:
 ---
 background-image: url("../pic/slide-front-page.jpg")
 class: center,middle
-exclude: `r params$hideslide`
 
 # 高级计量暑期班</br></br>(Seminar of Advanced Econometrics)
 
@@ -38,7 +35,8 @@ exclude: `r params$hideslide`
 ### `r Sys.Date()`
 
 
-```{r , echo=F,message=FALSE,warning=F, eval=!params$hideslide}
+```{r, echo=F,message=FALSE,warning=F, eval=T}
+
 source("../R/set-global.R")
 source("../R/xfun.R", encoding = "UTF-8")
 source("../R/external-math-equation.R")
@@ -82,20 +80,35 @@ xaringanExtra::use_logo(
 class: center, middle, duke-orange,hide_logo
 name:chapter-RDD
 
-# 断点回归设计（RDD）
+# 断点回归设计（RDD）：PART II
 
-### 1.RDD原理是什么？(How Does It Work?)
+.left[
 
-### 2.RDD该如何实施？(How Is It Performed?)
+### 1.箱组均值估计(Binned Means Estimator)
 
-### 3.RDD怎样高级进阶？(How the Pros Do It?)
+### 2.核回归估计(Kernel Regression Estimator)
+
+### 3.局部线性估计(Local Linear Estimator)
+
+### 4.局部多项式估计(Local polynomial Estimator)
+
+]
+
+.pull-right[
+
+### 5.渐近偏误和方差(Asymptotic Bias and variance)
+
+### 6.谱宽选择(bandwidth selection)
+
+]
+
 
 ---
 layout: false
 class: center, middle, duke-orange,hide_logo
-name: principal
+name: bins-est
 
-# 1.RDD原理是什么？</br></br>(How Does It Work?)
+# 0.引言
 
 
 ---
@@ -111,23 +124,73 @@ layout: true
 
 <div class="my-footer"><span>huhuaping@  &emsp;&emsp; <a href="#chapter-RDD">  </a>
 &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
-<a href="#principal"> 1.RDD原理是什么？ </a> </span></div> 
+<a href="#principal"> 0.引言 </a> </span></div> 
 
 ---
 
-### 引子：地理区隔与收入变化
+### 引言：非参数估计
 
-.case[
+**条件期望函数**（conditional expectation function ，CEF）：
 
-**示例**：
+$$\mathbb{E}(Y|X=x)=m(x)$$
 
-- 圣地亚哥(San Diego)是美国南部一个大城市，占地面积超过300平方英里。 它也很富裕，截至2019年，家庭平均年收入超过85000美元，比全国平均水平高出约50%。
 
-- 当您向南进入城市的其他区域时，一些南部地区的收入会少一些。例如用，当你往南到达的圣伊西德罗(San Ysidro)地区时（靠近墨西哥边境），家庭收入已经下降到50000-55000美元左右。你越往南走，期望家庭收入就越低。
+非参数回归模型：
 
-- 但是，当我们越过边境进入墨西哥的蒂华纳(Tijuana, Mexico)时会发生什么？一旦越过边境进入墨西哥的蒂华纳(Tijuana)。 你会发现家庭收入，突然和急剧地下降到20000美元左右。
+$$\begin{align}
+Y = \mathbb{E}(Y|X=x) + u &=m(x) +u \\
+\mathbb{E}(u|X=x) &= 0 \\
+\mathbb{E}(u^2|X=x) &= \sigma^2(X)
+\end{align}$$
 
-]
+
+
+---
+layout: false
+class: center, middle, duke-orange,hide_logo
+name: bins-est
+
+# 1.箱组均值估计(Binned Means Estimator)
+
+
+---
+layout: true
+
+<div class="my-header-h2"></div>
+
+<div class="watermark1"></div>
+
+<div class="watermark2"></div>
+
+<div class="watermark3"></div>
+
+<div class="my-footer"><span>huhuaping@  &emsp;&emsp; <a href="#chapter-RDD">  </a>
+&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
+<a href="#principal"> 1.箱组均值估计(Binned Means Estimator) </a> </span></div> 
+
+---
+
+### 箱组均值估计：表达式
+
+$$\begin{align}
+\hat{m}(x)=\frac{\sum_{i=1}^{n}  \mathbb{1}\left\{\left|X_{i}-x\right| \leq h\right\} \cdot Y_{i}}{\sum_{i=1}^{n}  \mathbb{1}\left\{\left|X_{i}-x\right| \leq h\right\}} 
+\end{align}$$
+
+
+---
+exclude: true
+
+## Code script: Hensen bruce fig 21.1
+
+- 此代码仅用于生成本地图片，为提高渲染效率代码文件仅需运行一次。
+
+- 如更新代码，请更改`eval = TRUE`
+
+```{r, eval=FALSE}
+source("../Rscript/hansen21-fig21-1a.R", encoding = "UTF-8")
+```
+
+
 
 ---
 
@@ -1041,7 +1104,7 @@ exclude: true
 - 如更新代码，请更改`eval = TRUE`
 
 ```{r, eval=TRUE}
-source("../Rscript/hansen21-fig21-1b.R", encoding = "UTF-8")
+source("../Rscript/hansen21-fig21_1b.R", encoding = "UTF-8")
 ```
 
 

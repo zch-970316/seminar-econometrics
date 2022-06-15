@@ -34,7 +34,7 @@ exclude: FALSE
 
 ### huhuaping01@hotmail.com
 
-### 2022-06-14
+### 2022-06-15
 
 
 
@@ -155,7 +155,7 @@ layout: true
 
 .notes[
 
-&gt; RDD是一种用于检验**因果关系**（causal relationship）假设的分析方法([Thistlethwaite and Campbell, 1960](#bib-thistlethwaite1960))
+&gt; RDD是一种用于检验**因果关系**（causal relationship）假设的分析方法&lt;a name=cite-thistlethwaite1960&gt;&lt;/a&gt;([Thistlethwaite and Campbell, 1960](#bib-thistlethwaite1960))
 
 ]
 
@@ -163,7 +163,7 @@ layout: true
 
 ### 相关概念定义：RDD（复杂一点的解释）
 
-RDD主要用于如下情形([Cattaneo and Titiunik, 2021](#bib-cattaneo2021))：
+RDD主要用于如下情形&lt;a name=cite-cattaneo2021&gt;&lt;/a&gt;([Cattaneo and Titiunik, 2021](#bib-cattaneo2021))：
 
 .notes[
 
@@ -269,7 +269,7 @@ D=
 &gt; 
 
 - **局部随机性实验**（Local randomized
-experiment）：在某些情形下，全局性（global）的随机对照实验难以满足或事实，但是却可以在局部范围内（local）进行近似随机的对照实验([Hausman and Rapson, 2018](https://doi.org/10.1146/annurev-resource-121517-033306))。
+experiment）：在某些情形下，全局性（global）的随机对照实验难以满足或事实，但是却可以在局部范围内（local）进行近似随机的对照实验&lt;a name=cite-hausman2018&gt;&lt;/a&gt;([Hausman and Rapson, 2018](https://doi.org/10.1146/annurev-resource-121517-033306))。
 
 ]
 
@@ -1026,7 +1026,7 @@ Z_{i}=\left(
 
 当然，这里可以建议使用两种谱宽选择方法：
 
-- **多项式**(polynomial, PN)谱宽选择法([Fan, Gijbels, Hu, et al., 1996](#bib-fan1996))：这是一种经验方法。
+- **多项式**(polynomial, PN)谱宽选择法&lt;a name=cite-fan1996&gt;&lt;/a&gt;([Fan, Gijbels, Hu, and Huang, 1996](#bib-fan1996))：这是一种经验方法。
 
 - **交叉验证**（cross validation, CV）谱宽选择法
 
@@ -1135,7 +1135,7 @@ LOO）、K折法（K-fold）、**自助法**（Bootstrap）等。
 
 .fyi[
 
-&gt; 因为局部性存在多种可能，所以这类方法得到的谱宽会更加不稳定。具体参看([Imbens and Kalyanaraman, 2012](#bib-imbens2012c); [Arai and Ichimura, 2018](#bib-arai2018))。
+&gt; 因为局部性存在多种可能，所以这类方法得到的谱宽会更加不稳定。具体参看&lt;a name=cite-imbens2012c&gt;&lt;/a&gt;&lt;a name=cite-arai2018&gt;&lt;/a&gt;([Imbens and Kalyanaraman, 2012](#bib-imbens2012c); [Arai and Ichimura, 2018](#bib-arai2018))。
 
 ]
 
@@ -1237,7 +1237,7 @@ m(x, z)=m_{0}(x) \cdot \mathbb{1}\{x&lt; c\}+m_{1}(x) \cdot \mathbb{1}\{x \geq c
 
 ### RDD协变量分析：估计方法
 
-RDD协变量估计方法有很多种，这里重点讨论([Robinson, 1988](#bib-robinson1988))提出了一种**半参数效率**估计方法，主要步骤如下：
+RDD协变量估计方法有很多种，这里重点讨论&lt;a name=cite-robinson1988&gt;&lt;/a&gt;([Robinson, 1988](#bib-robinson1988))提出了一种**半参数效率**估计方法，主要步骤如下：
 
 - **步骤1**：直接采用前面的RDD局部线性回归方法（LLR），用
 `\(Y_i\)`对
@@ -1400,6 +1400,19 @@ if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
     deleted = true;
   });
 })();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
 (function() {
   "use strict"
   // Replace <script> tags in slides area to make them executable
