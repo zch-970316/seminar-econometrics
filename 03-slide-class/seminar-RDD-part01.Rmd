@@ -41,7 +41,7 @@ exclude: `r params$hideslide`
 ```{r , echo=F,message=FALSE,warning=F, eval=!params$hideslide}
 source("../R/set-global.R")
 source("../R/xfun.R", encoding = "UTF-8")
-source("../R/external-math-equation.R")
+#source("../R/external-math-equation.R")
 options(width = 70)
 # for bib reference
 source("../R/ref-bib.R")
