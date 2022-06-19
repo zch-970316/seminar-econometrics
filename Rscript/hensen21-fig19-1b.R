@@ -15,6 +15,9 @@ m <- sin(xdat*a)/(xdat*a)
 m <- sin((xdat-2)*a)/((xdat-2)*a)
 ydat <- m + rnorm(n)/4
 
+dt <- tibble(index = 1:length(xdat), X = xdat, Y = ydat)
+
+
 h1 <- 1
 h2 <- h1/sqrt(3)
 
@@ -76,43 +79,152 @@ x5 <- as.matrix(subset(x,(x>=8)))
 f5 <- beta5[1]+x5*beta5[2]
 
 m0 <- c(m1,m2,m3,m4,m5)
+f0 <- c(f1, f2,f3, f4, f5)
 
-wd <- 1.4
+#### combine all result ####
+tbl_result <- tibble(id = 1:length(x),
+                     x = x,
+                     x_upr = x +0.01) %>%
+  mutate(bd = cut_interval(x,length = 2, right=FALSE)) %>%
+  mutate(
+    lwr = as.numeric(str_extract(bd, "(\\d{1})(?=\\,)")),
+    upr = as.numeric(str_extract(bd, "(?<=\\,)(\\d{1,2})")),
+    mid = 0.5*(lwr+ upr)
+  ) %>%
+  mutate(lft = x-h1,
+         rgt = x +h1,
+         bins = str_c('[',lft,',',rgt, ')')) %>%
+  mutate(my = rep(m0, times=c(200,200,200,200,201)),
+         m0 = (as.vector(f0)),
+         m1 = (as.vector(mr)),
+         m2 = as.vector(mg))
 
-pdf("HANSEN19-1b.pdf",family="Helvetica",colormodel='cmyk',width=4.5,height=4.5)
-plot(x,mr,type="l",lty=1,ylab="Dependent Variable",xlab="Regressor",xaxs="i",yaxs="i",ylim=c(-.75,1.5),xlim=c(0,10),xaxt="n", yaxt="n",lwd=wd,bty="n")
-lines(x,mg,lty=5,lwd=wd)
-points(xdat,ydat,pch=1,cex=.7)
-points(x0,m0,pch=15,cex=1)
-abline(v=2,lty=3,lwd=wd)
-abline(v=4,lty=3,lwd=wd)
-abline(v=6,lty=3,lwd=wd)
-abline(v=8,lty=3,lwd=wd)
-lines(x1,f1,lty=2,lwd=wd)
-lines(x2,f2,lty=2,lwd=wd)
-lines(x3,f3,lty=2,lwd=wd)
-lines(x4,f4,lty=2,lwd=wd)
-lines(x5,f5,lty=2,lwd=wd)
-axis(side=1,seq(0,10,1),lwd=wd)
-axis(side=2,seq(-1,2,.5),lwd=wd)
-legend("topright",legend=c("Binned Regression","Rolling Binned","Local Linear"),lty=c(2,1,5),bg="white",lwd=wd,bty="n")
-dev.off()
 
-postscript("HANSEN19-1b.eps",paper="special",width=4.5,height=4.5,horizontal=FALSE,onefile=FALSE,family="Helvetica",colormodel='cmyk')
-plot(x,mr,type="l",lty=1,ylab="Dependent Variable",xlab="Regressor",xaxs="i",yaxs="i",ylim=c(-.75,1.5),xlim=c(0,10),xaxt="n", yaxt="n",lwd=wd,bty="n")
-lines(x,mg,lty=5,lwd=wd)
-points(xdat,ydat,pch=1,cex=.7)
-points(x0,m0,pch=15,cex=1)
-abline(v=2,lty=3,lwd=wd)
-abline(v=4,lty=3,lwd=wd)
-abline(v=6,lty=3,lwd=wd)
-abline(v=8,lty=3,lwd=wd)
-lines(x1,f1,lty=2,lwd=wd)
-lines(x2,f2,lty=2,lwd=wd)
-lines(x3,f3,lty=2,lwd=wd)
-lines(x4,f4,lty=2,lwd=wd)
-lines(x5,f5,lty=2,lwd=wd)
-axis(side=1,seq(0,10,1),lwd=wd)
-axis(side=2,seq(-1,2,.5),lwd=wd)
-legend("topright",legend=c("Binned Regression","Rolling Binned","Local Linear"),lty=c(2,1,5),bg="white",lwd=wd,bty="n")
-dev.off()
+tbl_match <- tbl_result %>%
+  mutate(data = map(x,~dt)) %>%
+  unnest(data) %>%
+  mutate(
+    isbins = ifelse(
+      ((X>=x-h1)& (X<(x+h1))),
+      1, 0)
+  )  %>%
+  mutate(bd = as.character(bd)) %>%
+  mutate(
+    isbd = ifelse(
+      ((X>=lwr)& (X<(upr))),
+      1, 0)
+  )
+
+
+# binned mean
+tbl_m0 <- tbl_match %>%
+  filter(isbins==1) %>%
+  select(index, X, Y, bd,bins,lwr, upr,mid, x,my,m0, isbins) %>%
+  unique() %>%
+  arrange(lwr,index) %>%
+  group_by(x) %>%
+  mutate(sum_k = sum(isbins)) %>%
+  ungroup() 
+
+
+# scrolling mean
+tbl_m1 <- tbl_match %>%
+  filter(isbins==1) %>%
+  select(index, X, Y, bd,bins,lft, rgt,x,m1, isbins) %>%
+  unique() %>%
+  arrange(lft,index) %>%
+  group_by(x) %>%
+  mutate(sum_k = sum(isbins)) %>%
+  ungroup() %>%
+  rename("lwr"="lft", "upr"="rgt")
+
+# scrolling mean
+tbl_m2 <- tbl_match %>%
+  filter(isbins==1) %>%
+  select(index, X, Y, bd,bins,lft, rgt,x,m2, isbins) %>%
+  unique() %>%
+  arrange(lft,index) %>%
+  group_by(x) %>%
+  mutate(sum_k = sum(isbins)) %>%
+  ungroup() %>%
+  rename("lwr"="lft", "upr"="rgt")
+
+#### draw plot ####
+
+# basic plot
+p0 <- ggplot() +
+  geom_point(aes(X, Y),data = dt, pch=21) +
+  labs(x= "自变量X", y ="因变量Y") +
+  scale_x_continuous(breaks = seq(0,10,1), limits = c(0,10)) +
+  scale_y_continuous(breaks = seq(-1,2,0.5), limits = c(-1,2)) +
+  theme_bw()
+
+p00 <- p0 +
+  geom_vline(xintercept = x0, lty="dashed") +
+  geom_point(aes(X, Y, color=as.factor(bd)),
+             data = tbl_m0 %>% select(X, Y, bd) %>% unique(),
+             pch=21) +
+  geom_rect(aes(ymin=-1,ymax=2,
+                xmin= lwr, xmax = upr, 
+                fill = as.factor(bd)),
+            data = tbl_m0 %>% select(bd, lwr, upr) %>% unique(),
+            alpha = 0.05, inherit.aes = FALSE) +
+  theme(legend.position = "none")
+
+### binned plot
+p1 <- p00 +
+  geom_point(aes(mid, my),
+             data = tbl_m0 %>% select(mid, my) %>% unique(), 
+             pch=15, color="black") +
+  geom_line(aes(x =x, y = m0,
+                color=as.factor(bd)),
+               data = tbl_m0 %>% select(x,m0, bd) %>% unique(),
+               lty="solid", lwd=0.8) +
+  theme(legend.position = "none")
+
+## scrolling  plot
+
+p2 <- p0 +
+  geom_point(aes(mid, my),
+             data = tbl_m0 %>% select(mid, my) %>% unique(), 
+             pch=15, color="black")  +
+  geom_line(aes(x =x, y = m1,
+                color=as.factor(bd)),
+            data = tbl_m1 %>% select(x,m1, bd) %>% unique(),
+            lty="solid", lwd=0.8) +
+  theme(legend.position = "none")
+
+## Nadaraya-Watson  plot
+p3 <- p0 +
+  geom_point(aes(mid, my),
+             data = tbl_m0 %>% select(mid, my) %>% unique(), 
+             pch=15, color="black")  +
+  geom_line(aes(x =x, y = m2,
+                color=as.factor(bd)),
+            data = tbl_m2 %>% select(x,m2, bd) %>% unique(),
+            lty="solid", lwd=0.8)+
+  theme(legend.position = "none")
+
+## all three plot
+
+p_all <- p0 +
+  geom_vline(xintercept = x0, lty="dashed")  +
+  geom_point(aes(mid, my),
+             data = tbl_m0 %>% select(mid, my) %>% unique(), 
+             pch=15, color="black", size =2)  +
+  geom_line(aes(x =x, y = m0, 
+                color="binned reg"),
+            data = tbl_m0 %>% select(x,m0, bd) %>% unique(),
+            lty="solid", lwd=0.8) +
+  geom_line(aes(x, m1, color="rolling reg"),
+            data = tbl_m1 %>% select(x,m1, bd) %>% unique(),
+            lty="solid", lwd=0.8) +
+  geom_line(aes(x, m2, color = "LL reg"),
+            data = tbl_m2 %>% select(x,m2, bd) %>% unique(),
+            lty="solid", lwd=0.8) +
+  scale_color_manual(
+    name="mx reg",
+    breaks = c("binned reg", "rolling reg","LL reg"),
+    values=c("green", "red","blue"))+
+  theme(legend.position = "right")
+

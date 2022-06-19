@@ -53,7 +53,7 @@ tbl_result <- tibble(id = 1:length(x),
          rgt = x +h1,
          bins = str_c('[',lft,',',rgt, ')')) %>%
   mutate(m0 = rep(m0, times=c(200,200,200,200,201)),
-         m1 = (as.vector(m1)),
+         m1 = as.vector(m1),
          m2 = as.vector(m2))
 
 
