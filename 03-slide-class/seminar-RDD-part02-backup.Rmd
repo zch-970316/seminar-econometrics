@@ -180,14 +180,14 @@ $$\begin{align}
 ---
 exclude: true
 
-## Code script: Hensen bruce fig 19.1-a
+## Code script: Hensen bruce fig 21.1
 
 - 此代码仅用于生成本地图片，为提高渲染效率代码文件仅需运行一次。
 
 - 如更新代码，请更改`eval = TRUE`
 
 ```{r, eval=TRUE}
-source("../Rscript/hensen21-fig19-1a.R", encoding = "UTF-8")
+source("../Rscript/demo-binned-estimator.R", encoding = "UTF-8")
 ```
 
 
@@ -221,23 +221,21 @@ exclude: true
 
 ```{r}
 # help function
-gen_bins <- function(df){
+gen_bins <- function(df, h, acc){
   out <- df %>% 
-    select(#index, X, Y,
-           x, bins,sum_ky, sum_k,
-           starts_with("m")) %>%
-    unique() %>%
-    arrange(x) %>%
-    mutate(x=number(x, 0.01))
+  mutate(lwr = x-h, 
+         upr = x+h,
+         bins = str_c('(',number(lwr,acc),',',
+                      number(upr,acc),']'))
 }
 
-bin1 <- gen_bins(tbl_m0)
+bin1 <- gen_bins(tbl_binned, h=h1, acc=0.1)
 n1 <- nrow(bin1)
 
-bin2 <- gen_bins(tbl_m1)
+bin2 <- gen_bins(tbl_rolling, h=h1, acc=0.01)
 n2 <- nrow(bin2)
 
-bin3 <- gen_bins(tbl_m2)
+bin3 <- gen_bins(tbl_NW, h=h1, acc=0.01)
 n3 <- nrow(bin3)
 ```
 
@@ -268,7 +266,7 @@ $h=1$，箱组区块bins=`r paste0(bin1$bins, collapse="、")`，箱组数`r n1`
 
 ```{r}
 bin1 %>%
-  #select(x, bins, sum_KY, sum_K, mx) %>%
+  select(x, bins, sum_KY, sum_K, mx) %>%
   DT::datatable(options = list(dom = "t"))%>%
   formatRound(c(3,5),c(4,4))
 ```
@@ -302,6 +300,8 @@ $,\cdots,$ `r paste0(bin2$bins[(n2-2):n2], collapse="、")`，箱组数`r n2`。
 
 ```{r}
 bin2 %>%
+  select(x, bins, sum_KY, sum_K, mx) %>%
+  #slice(1:20) %>%
   DT::datatable(
     options = list(dom = "tip",
                    pageLength =5)) %>%
@@ -453,11 +453,13 @@ $(X=x),x \in (`r head(bin3$x)` \ldots `r tail(bin3$x)`)$，谱宽
 $h=1/\sqrt{3}$，核函数为**高斯核函数**<sup>a</sup>。
 
 ```{r}
-bin3 %>%
+bin2 %>%
+  select(x, bins, sum_KY, sum_K, mx) %>%
+  #slice(1:20) %>%
   DT::datatable(
     options = list(dom = "tip",
                    pageLength =5)) %>%
-  formatRound(c(3:5),c(4))
+  formatRound(c(3,5),c(4,4))
   
 ```
 
@@ -478,7 +480,6 @@ kernel）估计，也等价于前述的箱组估计**情形2**
 p3
 ```
 
-
 ---
 
 ### （示例）CEF估计：三种估计方法的图形比较
@@ -487,6 +488,7 @@ p3
 #| out.height = 450
 p_all
 ```
+
 
 
 ---
