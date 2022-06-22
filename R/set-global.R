@@ -10,7 +10,9 @@ options(
 # global options for knitr
 knitr::opts_chunk$set(fig.align='center',echo = FALSE,message = FALSE,
                       warning = FALSE, comment="",
-                      fig.width=11, fig.height=6) # Places figures on their own pages
+                      fig.width=11, fig.height=6,
+                      dev = 'svglite',fig.retina = 1 # improve resolution
+                      ) 
 
 # global options for DT
 options(htmltools.preserve.raw = FALSE)
@@ -60,4 +62,5 @@ require("png")
 require("jpeg")
 require("kableExtra")
 require("foreign")
+require("janitor")
 require("xmerit")

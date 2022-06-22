@@ -82,25 +82,16 @@ name:chapter-RDD
 
 # 断点回归设计（RDD）：PART II
 
-.pull-left[
 
-### 1.箱组均值估计(Binned Means Estimator)
+### [1.均值估计(Means Estimator)](#mean-est)
 
-### 2.核回归估计(Kernel Regression Estimator)
+### [2.局部回归(Local Regression)](#local-reg)
 
-### 3.局部线性估计(Local Linear Estimator)
+### [3.估计效果(Performance Analysis)](#performance)
 
-### 4.局部多项式估计(Local polynomial Estimator)
+### 4.谱宽选择(Bandwidth Selection)
 
-]
-
-.pull-right[
-
-### 5.渐近偏误和方差(Asymptotic Bias and variance)
-
-### 6.谱宽选择(bandwidth selection)
-
-]
+### 5.群组分析(Cluster observations)
 
 
 ---
@@ -126,32 +117,22 @@ layout: true
 &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
 <a href="#principal"> 0.引言 </a> </span></div> 
 
----
-
-### 引言：非参数估计
-
-**条件期望函数**（conditional expectation function ，CEF）：
-
-$$\mathbb{E}(Y|X=x)=m(x)$$
-
-
-非参数回归模型：
-
-$$\begin{align}
-Y = \mathbb{E}(Y|X=x) + u &=m(x) +u \\
-\mathbb{E}(u|X=x) &= 0 \\
-\mathbb{E}(u^2|X=x) &= \sigma^2(X)
-\end{align}$$
 
 
 
 ---
 layout: false
 class: center, middle, duke-orange,hide_logo
-name: bins-est
+name: mean-est
 
-# 1.箱组均值估计(Binned Means Estimator)
+# 1.均值估计(Binned Means Estimator)
 
+
+### 1.1 箱组均值估计(Binned Means Estimator)
+
+### 1.2 滚动箱组均值估计(Scrolling Binned Means Estimator)
+
+### 1.3 核估计(Kernel Estimator)
 
 ---
 layout: true
@@ -166,15 +147,69 @@ layout: true
 
 <div class="my-footer"><span>huhuaping@  &emsp;&emsp; <a href="#chapter-RDD">  </a>
 &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
-<a href="#bins-est"> 1.箱组均值估计(Binned Means Estimator) </a> </span></div> 
+<a href="#mean-est"> 1.均值估计(Binned Means Estimator) </a> </span></div> 
 
 ---
 
-### 箱组均值估计：表达式
+### 引子：为什么要进行均值估计？
+
+对于计量模型：
 
 $$\begin{align}
-\hat{m}(x)=\frac{\sum_{i=1}^{n}  \mathbb{1}\left\{\left|X_{i}-x\right| \leq h\right\} \cdot Y_{i}}{\sum_{i=1}^{n}  \mathbb{1}\left\{\left|X_{i}-x\right| \leq h\right\}} 
+Y &= m(X) +e
 \end{align}$$
+
+研究者首先需要关注的是
+
+- **条件期望函数**（Conditional Expectation Function ,CEF）：
+
+$$\begin{align}
+\mathbb{E}[Y|X=x] \equiv m(x) 
+\end{align}$$
+
+- 此时：
+
+$$\begin{align}
+Y & = m(X) +e \\
+  & = \mathbb{E}[Y|X=x]  + e
+\end{align}$$
+
+---
+
+### 引子：什么是非参数估计？
+
+- 理论上，条件期望函数
+$m(x)$可以表现为明确的**参数化**形式（parametric function），也可以表现为任意的**非参数化**形式（non-parametric function）。
+
+.case[
+
+- 常见的参数化条件期望函数，例如线性形式：
+
+$$Y= m(x) +e = \beta_0 +\beta_1 X +e$$
+
+
+]
+
+---
+
+### 引子：什么是非参数估计？
+
+- **非参数回归模型**（nonparametric regression model）：假定**条件期望函数**表现为任意的**非参数化**形式的回归模型。
+
+.case[
+
+- **非参数回归模型**可以表达为：
+
+$$\begin{align}
+Y = \mathbb{E}(Y|X=x) + e &=m(x) +e \\
+\mathbb{E}(e|X=x) &= 0 \\
+\mathbb{E}(e^2|X=x) &= \sigma^2(X)
+\end{align}$$
+
+]
+
+- 此时，我们的目标就是估计得到条件期望函数
+$\widehat{m}(x)$。
 
 
 ---
@@ -196,6 +231,7 @@ source("../Rscript/hensen21-fig19-1a.R", encoding = "UTF-8")
 
 ### （示例）：模拟数据集
 
+为了更好地进行数据验证，我们将根据如下规则生成蒙特卡洛模拟数据集：
 
 $$\begin{align}
 Y_i &= m(X) +e_i 
@@ -205,14 +241,47 @@ e_i &\sim N(0, 2)\\
 n &=100
 \end{align}$$
 
+- 此时，我们具有**上帝视角**，实际上已经知道**数据生成机制**（DGP）
+
+- 此时，我们心里面已知真实模型为**非线性的**
+
 
 ---
 
-### （示例）：原始数据散点图
+###（示例）：模拟的样本数据集
+
+.pull-left[
+
+```{r}
+dt %>%
+  #add_column(obs = 1:nrow(.), .before = "X") %>%
+  DT::datatable(
+    caption = paste0("模拟的样本数据集(n=",n,")"),
+    options = list(dom = "tip", pageLength =8))%>%
+  formatRound(c(2:3), digits = 4)
+```
+
+]
+
+.pull-right[
+
+- 样本数据的描述性统计如下：
+
+```{r}
+summary(dt)
+```
+
+]
+
+
+---
+
+### （示例）：样本数据散点图
 
 ```{r}
 p0
 ```
+
 
 ---
 exclude: true
@@ -243,48 +312,133 @@ n3 <- nrow(bin3)
 
 ---
 
-### （示例）箱组均值估计：两种分组情形
+### 1.1 箱组均值估计：表达式
 
+对于**非参数模型**：
 
-下面我们分别对两种箱组设定情形进行均值估计：
+$$\begin{align}
+Y = \mathbb{E}(Y|X=x) + e &=m(x) +e 
+\end{align}$$
 
-- **箱组情形1**：取值点
-$(X=x),x \in (`r seq(1,9,2)`)$，谱宽
-$h=1$，箱组区块bins=`r paste0(bin1$bins, collapse="、")`，箱组数`r n1`。
+我们可以直接把数据集划分为不同**箱组**（bins），然后简单地计算各个箱组中
+$Y_i$的均值。
 
-- **箱组情形2**：取值点
-$(X=x),x \in (`r head(bin2$x)`, \cdots, `r tail(bin2$x)`)$，谱宽
-$h=1$，箱组区块bins=`r paste0(bin2$bins[1:3], collapse="、")`
-$\ldots$`r paste0(bin2$bins[(n2-2):n2], collapse="、")`，箱组数`r n2`。
+$$\begin{align}
+\hat{m}(x)=\frac{\sum_{i=1}^{n}  \mathbb{1}\left\{\left|X_{i}-x\right| \leq h\right\} \cdot Y_{i}}{\sum_{i=1}^{n}  \mathbb{1}\left\{\left|X_{i}-x\right| \leq h\right\}} 
+\end{align}$$
+
+其中：
+
+- 
+$\mathbb{1}\left\{\left|X_{i}-x\right| \leq h\right\}$为**指示函数**，取值为
+$\{0,1\}$，以表明
+$X_i$是否落在特定**箱组**内
+
+- 以上公式可以简单视作为箱组内的**简单算数平均数**公式
 
 
 ---
 
-### （示例）箱组均值估计情形1：数据计算表
+### 1.1 箱组均值估计：操作步骤
 
-**箱组情形1**：取值点
-$(X=x),x \in (`r seq(1,9,2)`)$，谱宽
-$h=1$，箱组区块bins=`r paste0(bin1$bins, collapse="、")`，箱组数`r n1`。
+**箱组均值估计**（Binned Estimator）的操作步骤如下：
+
+- 根据计算点
+$X=x_j$，按照特定谱宽
+$h$，划分出若干**箱组**（bins）：
+$\{b_1,b_2,\cdots,b_q\}$
+
+$$b_{j}=[x_j-h,x_j +h] $$
+
+
+
+- 根据样本数据集，以及
+$X_i$的实际情况，确定数据对
+$\{X_i, Y_i\}$的箱组归属：
+
+$$\mathbb{1}\left\{\left|X_{i}-x_j\right| \leq h\right\}$$
+
+
+- 最后计算不同箱组的
+$Y_i$的均值
+$\widehat{m}(x_{b_j}),j \in (1,2,\cdots,q)$：
+
+$$\begin{align}
+\hat{m}(x)=\frac{\sum_{i=1}^{n}  \mathbb{1}\left\{\left|X_{i}-x\right| \leq h\right\} \cdot Y_{i}}{\sum_{i=1}^{n}  \mathbb{1}\left\{\left|X_{i}-x\right| \leq h\right\}} 
+\end{align}$$
+
+---
+
+### （示例）箱组均值估计：设定箱组划分规则
+
+
+下面我们分别设定如下**箱组**划分规则：
+
+- 设定箱组取值中心点
+$(X=x_i),x_i \in (`r seq(1,9,2)`)$，以及谱宽
+$h=1$
+
+- 然后得到箱组区块bins=`r paste0(bin1$bins, collapse="、")`，箱组数为`r n1`。
+
+
+---
+
+### （示例）箱组均值估计：数据计算表
+
+利用箱组均值估计公式，我们可以计算得到不同箱组的均值估计：
 
 ```{r}
 bin1 %>%
   #select(x, bins, sum_KY, sum_K, mx) %>%
   DT::datatable(options = list(dom = "t"))%>%
-  formatRound(c(3,5),c(4,4))
+  formatRound(c(1,3,5),c(0,4,4))
 ```
+
+- 箱组内因变量观测值的求和`sum_ky`
+$=\sum_{i=1}^{n}  \mathbb{1}\left\{\left|X_{i}-x\right| \leq h\right\} \cdot Y_{i}$
+
+- 箱组的样本数`sum_k`
+$=\sum_{i=1}^{n}  \mathbb{1}\left\{\left|X_{i}-x\right| \leq h\right\}$
+
+- 箱组的均值估计`m0`
+$=\widehat{m}(x_j),j \in (1,2,\cdots,5)$
+
 
 ---
 
-### （示例）箱组均值估计情形1：图形表达1/2
+### （示例）箱组均值估计：图形表达1/3
+
+- 首先我们展示的是5个箱组的划分：
 
 ```{r}
 #| out.height = 450
 p00
 ```
 
+.footnote[
+
+**说明**：a)垂直虚线表示箱组中心取值点
+$x_j$；b)不同矩形颜色区块表示不同箱组。
+
+]
+
 ---
 
-### （示例）箱组均值估计情形1：图形表达2/2
+### （示例）箱组均值估计：图形表达2/3
+
+- 根据箱组均值计算值，我们展示在散点图中：
+
+```{r}
+#| out.height = 450
+p000
+```
+
+
+---
+
+### （示例）箱组均值估计：图形表达3/3
+
+- 简单地，可将**箱组均值**作为对这一箱组**条件期望函数**CEF的近似：
 
 ```{r}
 #| out.height = 450
@@ -293,12 +447,82 @@ p1
 
 ---
 
-### （示例）滚动箱组均值估计情形2：数据计算表
+### 1.2 滚动箱组均值估计：定义及表达式
 
-**箱组情形2** <sup>a</sup> ：取值点
-$(X=x),x \in (`r head(bin2$x)` \ldots `r tail(bin2$x)`)$，谱宽
-$h=1$，箱组区块bins=`r paste0(bin2$bins[1:3], collapse="、")`
-$,\cdots,$ `r paste0(bin2$bins[(n2-2):n2], collapse="、")`，箱组数`r n2`。
+**滚动箱组均值估**（The rolling binned means estimator）：以系列数值
+$x$为中心，以
+$h$为谱宽，**滚动**构建一系列箱组（箱组会有重叠），并分别计算出系列箱组的均值。
+
+$$\begin{align}
+\hat{m}(x)=\frac{\sum_{i=1}^{n}  \mathbb{1}\left\{\left|X_{i}-x\right| \leq h\right\} \cdot Y_{i}}{\sum_{i=1}^{n}  \mathbb{1}\left\{\left|X_{i}-x\right| \leq h\right\}} 
+\end{align}$$
+
+.fyi[
+
+- 我们后面马上会介绍，**滚动箱组均值估**实际上是一类特殊的**核估计**（kernel）情形，具体为Nadaraya-Watson 矩形和估计（NW rectangular
+kernel estimator）。
+
+]
+
+---
+
+### 1.2 滚动箱组均值估计：操作过程
+
+**滚动箱组均值估计**（Rolling Binned Estimator）的操作步骤如下：
+
+- 根据计算点
+$X=x_j$，按照特定谱宽
+$h$，划分出若干**箱组**（bins）（箱组会有重叠）：
+$\{b_1,b_2,\cdots,b_q\}$
+
+$$b_{j}=[x_j-h,x_j +h] $$
+
+
+
+- 根据样本数据集，以及
+$X_i$的实际情况，确定数据对
+$\{X_i, Y_i\}$的箱组归属：
+
+$$\mathbb{1}\left\{\left|X_{i}-x_j\right| \leq h\right\}$$
+
+
+- 最后计算不同箱组的
+$Y_i$的均值
+$\widehat{m}(x_{b_j}),j \in (1,2,\cdots,q)$：
+
+$$\begin{align}
+\hat{m}(x)=\frac{\sum_{i=1}^{n}  \mathbb{1}\left\{\left|X_{i}-x\right| \leq h\right\} \cdot Y_{i}}{\sum_{i=1}^{n}  \mathbb{1}\left\{\left|X_{i}-x\right| \leq h\right\}} 
+\end{align}$$
+
+
+---
+
+### （示例）滚动箱组均值估计：设定箱组划分规则
+
+
+下面我们分别设定如下**箱组**划分规则：
+
+- 设定箱组取值中心点
+$(X=x_i),x_i \in (`r head(bin2$x)`, \cdots, `r tail(bin2$x)`)$，以及谱宽<sup>a</sup>
+$h=1$
+
+- 那么，可以得到箱组区块bins=`r paste0(bin2$bins[1:3], collapse="、")`
+$\ldots$`r paste0(bin2$bins[(n2-2):n2], collapse="、")`，箱组数`r n2`。
+
+.footnote[
+
+<sup>a</sup> 此时滚动箱组均值估计等价于谱宽
+$h=1$的**矩形核函数**（rectangular
+kernel）估计
+
+]
+
+---
+
+### （示例）滚动箱组均值估计：数据计算表
+
+利用箱组均值估计公式，我们可以计算得到不同箱组的均值估计：
+
 
 ```{r}
 bin2 %>%
@@ -309,63 +533,116 @@ bin2 %>%
   
 ```
 
-.footnote[
 
-<sup>a</sup> 实际上将等价于后面马上要介绍的谱宽
-$h=1$的**矩形核函数**（rectangular
-kernel）估计。
+- 箱组内因变量观测值的求和`sum_ky`
+$=\sum_{i=1}^{n}  \mathbb{1}\left\{\left|X_{i}-x\right| \leq h\right\} \cdot Y_{i}$
 
-]
+- 箱组的样本数`sum_k`
+$=\sum_{i=1}^{n}  \mathbb{1}\left\{\left|X_{i}-x\right| \leq h\right\}$
+
+- 箱组的均值估计`m1`
+$=\widehat{m}(x_j),j \in (1,2,\cdots,1001)$
+
 
 ---
 
-### （示例）滚动箱组均值估计情形2：图形表达
+### （示例）滚动箱组均值估计：图形表达
+
+- 根据箱组均值计算值，我们展示在散点图中：
+
+```{r}
+#| out.height = 450
+p20
+```
+
+
+
+---
+
+### （示例）滚动箱组均值估计：图形表达
+
+- 同样地，可将**箱组均值**作为对这一箱组**条件期望函数**CEF的近似：
 
 ```{r}
 #| out.height = 450
 p2
 ```
 
-
-
 ---
-layout: false
-class: center, middle, duke-orange,hide_logo
-name: kernel-est
 
-# 2.核估计(Kernel Estimator)
+### 1.3 核估计：回顾与思考
 
+上述两种箱组均值估计的公式中：
 
----
-layout: true
+$$\begin{align}
+\hat{m}(x)=\frac{\sum_{i=1}^{n}  \mathbb{1}\left\{\left|X_{i}-x\right| \leq h\right\} \cdot Y_{i}}{\sum_{i=1}^{n}  \mathbb{1}\left\{\left|X_{i}-x\right| \leq h\right\}} 
+\end{align}$$
 
-<div class="my-header-h2"></div>
-
-<div class="watermark1"></div>
-
-<div class="watermark2"></div>
-
-<div class="watermark3"></div>
-
-<div class="my-footer"><span>huhuaping@  &emsp;&emsp; <a href="#chapter-RDD">  </a>
-&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
-<a href="#kernel-est"> 2.核估计(Kernel Estimator) </a> </span></div> 
+- 对条件期望的估计
+$\widehat{m}(x)$结果都呈现一定的**锯齿**形态（jagged），也即估计结果不太**平滑**（smoothed）。
 
 ---
 
-### 核估计：表达式
+### 1.3 核估计：回顾与思考
+
+.fyi[
+
+**思考**：
+
+- 为什么估计结果会呈现不太**平滑**的**锯齿**形态？
+
+- 能不能让估计结果更加平滑呢？
+
+]
+
+--
+
+.notes[
+
+**回答**：
+
+- 问题的关键在于上面的估计公式使用了箱组**指示**函数（可视作为权重）
+$\sum_{i=1}^{n}  \mathbb{1}\left\{\left|X_{i}-x\right| \leq h\right\}$，而这个**权重函数**本身是**跳跃的**。
+
+- 有没有一种办法能够基于平滑的**权重函数**来计算CEF的估计值呢？
+
+]
+
+---
+
+### 1.3 核估计：概念
+
+**核估计**（kernel estimator）：基于多种类型的**核函数**（kernel function）作为**权重函数**——可以是**连续的**，也可以是**跳跃的**——来估计条件期望函数
+$\widehat{m}(x)$的一种估计方法。
 
 $$\begin{align}
 \hat{m}_{\mathrm{nw}}(x)=\frac{\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right) Y_{i}}{\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right)}
 \end{align}$$
 
-- 其中，
+
+- 其中：
 $K(u)$为核函数（kernel function）
+
+---
+
+### 1.3 核估计：特点
+
+$$\begin{align}
+\hat{m}_{\mathrm{nw}}(x)=\frac{\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right) Y_{i}}{\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right)}
+\end{align}$$
+
+
+
+- 尽管这里使用了核函数来计算权重，但是本质上上述公式还是利用了**箱组估计**的方法，也即把箱组计算值作为这一箱组的**代表值**。
+
+- 以上估计方法也被称为**局部常数估计**（local constant estimator）或**NW估计**（Nadaraya-Watson estimator）
+
+- 容易发现前述**箱组均值估计**和**滚动箱组均值估计**都是**局部常数估计**（local constant estimator）的两个特例。
 
 
 ---
 
-### 核函数：定义
+### 1.3 核估计：核函数定义
 
 **定义**：若满足如下条件，则可称之为**核函数**（Kernel function）
 $K(u)$
@@ -387,9 +664,18 @@ $\int_{-\infty}^{\infty}|u|^{r} K(u) d u<\infty$
 
 $$\int_{-\infty}^{\infty} u^2K(u) d u=1$$
 
+.notes[
+
+- **核函数**本质上是一种**边界约束的**概率密度函数（bounded pdf）
+
+
+- **核函数**是原点对称的，且核函数为非负数（因此可用于权重）
+
+]
+
 ---
 
-### 核函数：常见的正规化核函数1/2
+### 1.3 核估计：常见的正规化核函数1/2
 
 - **矩形核函数**（Rectangular Kernel），
 $R_K= \frac{1}{2\sqrt{3}}$
@@ -421,7 +707,7 @@ $$\begin{aligned}
 
 ---
 
-### 核函数：常见的正规化核函数2/2
+### 1.3 核估计：常见的正规化核函数2/2
 
 - **三角核函数**（Triangular Kernel），
 $R_K= \frac{\sqrt{3}}{9}$
@@ -444,13 +730,56 @@ K(u)=\left\{\begin{array}{cl}
 \end{aligned}$$
 
 
+### 1.3 核估计：操作过程
+
+**NW核估计**（NW Estimator）的操作步骤如下：
+
+- 根据计算点
+$X=x_j$，按照特定谱宽
+$h$，划分出若干**箱组**（bins）（箱组会有重叠）：
+$\{b_1,b_2,\cdots,b_q\}$
+
+$$b_{j}=[x_j-h,x_j +h] $$
+
+
+
+- 根据样本数据集，以及
+$X_i$的实际情况，计算特定**核函数化**的权重值：
+
+$$K\left(\frac{X_{i}-x_j}{h}\right)$$
+
+
+- 最后计算不同箱组的
+$Y_i$的均值
+$\widehat{m}(x_{b_j}),j \in (1,2,\cdots,q)$：
+
+$$\begin{align}
+\hat{m}_{\mathrm{nw}}(x)=\frac{\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right) Y_{i}}{\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right)}
+\end{align}$$
+
 ---
 
-### （示例）核估计情形：数据计算表
+### （示例）核估计：设定箱组划分规则
 
-**核估计情形**：取值点
-$(X=x),x \in (`r head(bin3$x)` \ldots `r tail(bin3$x)`)$，谱宽
-$h=1/\sqrt{3}$，核函数为**高斯核函数**<sup>a</sup>。
+
+下面我们分别设定如下**箱组**划分规则：
+
+- 设定箱组取值中心点
+$(X=x_i),x_i \in (`r head(bin2$x)`, \cdots, `r tail(bin2$x)`)$
+
+- 确定核函数类型为**高斯核函数**<sup>a</sup>，谱宽设定为
+$h=1/\sqrt{3}$。
+
+- 那么，可以得到箱组区块bins=`r paste0(bin2$bins[1:3], collapse="、")`
+$\ldots$`r paste0(bin2$bins[(n2-2):n2], collapse="、")`，箱组数`r n2`。
+
+
+
+---
+
+### （示例）核估计：数据计算表
+
+利用箱组均值核函数估计公式，我们可以计算得到不同箱组的均值估计：
 
 ```{r}
 bin3 %>%
@@ -461,17 +790,13 @@ bin3 %>%
   
 ```
 
-.footnote[
 
-<sup>a</sup> 此时等价于谱宽
-$h=1$的**矩形核函数**（rectangular
-kernel）估计，也等价于前述的箱组估计**情形2**
-
-]
 
 ---
 
 ### （示例）核估计：图形表达
+
+- 同样地，可将**箱组均值**作为对这一箱组**条件期望函数**CEF的近似：
 
 ```{r}
 #| out.height = 450
@@ -488,14 +813,22 @@ p3
 p_all
 ```
 
+- **NW核估计**方法相比**箱组均值估计**和**滚动箱组均值估计**要更加平滑。
 
 ---
 layout: false
 class: center, middle, duke-orange,hide_logo
-name: LL-est
+name: local-reg
 
-# 3.局部线性估计(Local linear Estimator)
+# 2.局部回归(Local Regression)
 
+### 2.1 箱组线性回归（Binned Regression）
+
+### 2.2 滚动箱组回归（Rolling Regression）
+
+### 2.3 局部线性回归（Local Linear Regression）
+
+### 2.4 局部多项式回归（Local Polynomial Regression）
 
 ---
 layout: true
@@ -510,15 +843,38 @@ layout: true
 
 <div class="my-footer"><span>huhuaping@  &emsp;&emsp; <a href="#chapter-RDD">  </a>
 &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
-<a href="#LL-est"> 3.局部线性估计(Local linear Estimator) </a> </span></div> 
+<a href="#local-reg"> 2.局部线性估计(Local Regression) </a> </span></div> 
+
+
+---
+exclude: true
+
+## Code script: Hensen bruce fig 19.1-b
+
+- 此代码仅用于生成本地图片，为提高渲染效率代码文件仅需运行一次。
+
+- 如更新代码，请更改`eval = TRUE`
+
+```{r, eval=TRUE}
+source("../Rscript/hensen21-fig19-1b.R", encoding = "UTF-8")
+```
 
 ---
 
-### 局部线性估计：从NW估计量说起
+### 引子：从NW估计量说起
 
 在一个局部区域（如
 $X=x$的领域内），对
 $m(x)$的Nadaraya-Watson (NW)估计量将表现为**常函数**（constant function）形态，此时也称为**局部常数估计量**（Local constant estimator）。
+
+- 此时，Nadaraya-Watson (NW)估计量为一种局部近似，也即当在局部渐近取值
+$X\simeq x$时，
+$m(X) \simeq m(x)$
+
+$$Y=m(X)+e \simeq m(x)+e$$
+
+上述模型可以视作为回归方程，我们需要估计得到
+$\widehat{m}(x)$，也即：
 
 $$\begin{align}
 \widehat{m}_{\mathrm{nw}}(x)=\underset{m}{\operatorname{argmin}} \sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right)\left(Y_{i}-m\right)^{2}
@@ -527,54 +883,347 @@ $$\begin{align}
 - 本质上，以上就是一个
 $Y$对截距项的**加权回归**（Weighted regression）估计量。
 
+---
+
+### 引子：CEF的回归估计方法
+
+事实上，基于**箱组**原理的CEF估计方法，我们都可以使用回归方法来进行估计，具体包括：
+
+
+- 箱组线性回归（binned regression）：箱组内直接使用OLS回归估计
+
+- 滚动箱组核回归（NW regression）：箱组内直接使用OLS回归估计
+
+- 局部线性回归（Local linear regression）：箱组内使用加权OLS回归估计
+
+- 局部多项式回归（Local Polynomial regression）：箱组内使用多项式的加权OLS回归估计
+
+---
+
+### 2.1 箱组线性回归：原理
+
+**箱组线性回归**（binned regression）：箱组内直接使用OLS回归估计
+
+
+$$Y=m(X)+e \simeq m(x)+e$$
+
+- 上述模型可以视作为回归方程，我们需要估计得到
+$\widehat{m}(x)$，也即：
+
+$$\begin{align}
+\widehat{m}_{\mathrm{bin}}(x)=
+\underset{m}{\operatorname{argmin}} \sum_{i=1}^{n} \mathbf{1}  \{|X_i-x|\leq h\}\cdot \left(Y_{i}-m\right)^{2}
+\end{align}$$
+
+- 因为在箱组内的权重都是一样的，因此可以直接在**箱组内**的子样本数据里使用OLS回归估计得到
+
+$$\widehat{m}(x)={\widehat{Y}_i} \quad \text{(OLS)}$$
+
+---
+
+### 2.1 箱组线性回归：操作步骤
+
+**箱组线性回归**（Binned regression）的操作步骤如下：
+
+- 根据计算点
+$X=x_j$，按照特定谱宽
+$h$，划分出若干**箱组**（bins）：
+$\{b_1,b_2,\cdots,b_q\}$
+
+$$b_{j}=[x_j-h,x_j +h] $$
+
+
+
+- 根据样本数据集，以及
+$X_i$的实际情况，确定数据对
+$\{X_i, Y_i\}$的箱组归属（子样本）：
+
+$$\mathbb{1}\left\{\left|X_{i}-x_j\right| \leq h\right\}$$
+
+
+- 然后采用OLS方法计算不同箱组的
+$Y_i$的拟合值
+$\widehat{Y}_i = \widehat{m}(x) \simeq m(X)$
+
+$$\hat{Y}_i = \hat{\alpha}_0 + \hat{\alpha}_1 X_i$$
+
+- 最后，我们可以给定任意值
+$x_i$得到预测的
+$\widehat{m}(x_i)=\widehat{Y}_i|x_i$
+
+---
+
+### （示例）箱组回归估计：设定箱组划分规则
+
+
+下面我们分别设定如下**箱组**划分规则：
+
+- 设定箱组取值中心点
+$(X=x_i),x_i \in (`r seq(1,9,2)`)$，以及谱宽
+$h=1$
+
+- 然后得到箱组区块bins=`r paste0(bin1$bins, collapse="、")`，箱组数为`r n1`。
+
+- 箱组内的线性回归模型为
+
+$$\hat{Y}_i = \hat{\alpha}_0 + \hat{\alpha}_1 X_i$$
+
+- 基于设定的
+$x_i \in (`r head(bin2$x)`, \cdots, `r tail(bin2$x)`)$计算预测值
+$\widehat{m}(x_i)=\widehat{Y}_i|x_i$，共有
+$N=`r n2`$个
+
+---
+
+### （示例）箱组线性回归：数据计算表
+
+$$\hat{Y}_i = \hat{\alpha}_0 + \hat{\alpha}_1 X_i$$
+
+- 对五个箱组的区块下，我们依次对子样本数据对
+$(Y_i,X_i)$进行线性OLS拟合，分别得到截距和斜率：
+
+```{r}
+tbl_a0 %>%
+  kable()
+```
+
+.footnote[
+
+**说明**：`bd1`、`bd2`等分别代表五个箱组。
+
+]
+
+---
+
+### （示例）箱组线性回归：数据计算表
+
+利用箱组均值估计公式，我们可以计算得到不同箱组的均值估计：
+
+
+```{r}
+tbl_m0 %>%
+  select(bd, my, bins,x, m0) %>%
+  unique() %>%
+  arrange(x) %>%
+  DT::datatable(options = list(dom = "tip", pageLength =6))%>%
+  formatRound(c(2,4:5),c(4))
+```
+
+- 基于设定的`x`表示
+$x_i \in (`r head(bin2$x)`,\cdots)$，共有
+$N=`r n2`$个
+
+- 箱组回归估计`m0`
+$\widehat{m}(x_i)=\widehat{Y}_i|x_i$
+
+---
+
+### （示例）箱组线性回归：图形表达1/2
+
+- 如前，我们设定区隔了5个箱组
+
+```{r}
+#| out.height = 450
+p00
+```
+
+---
+
+### （示例）箱组线性回归：图形表达2/2
+
+- 根据前面计算表的`r n2`个拟合数据对
+$(x_i,\widehat{m}(x_i))$，我们可以得到箱组线性回归估计结果：
+
+```{r}
+#| out.height = 450
+p1
+```
+
+---
+
+### 2.2 滚动箱组回归：原理
+
+
+**滚动箱组线性回归**（rolling regression）：简单地，是通过构建滚动箱组（可能出现箱组重叠状态），然后再对箱组内样本数据直接使用OLS回归估计。此外，容易发现它实际上就是等价于**矩形核函数**的**NW回归**（
+$h=1$）。
+
 - 此时，Nadaraya-Watson (NW)估计量为一种局部近似，也即当在局部渐近取值
 $X\simeq x$时，
 $m(X) \simeq m(x)$
 
-$$
-Y=m(X)+e \simeq m(x)+e
-$$
+$$Y=m(X)+e \simeq m(x)+e$$
+
+上述模型可以视作为回归方程，我们需要估计得到
+$\widehat{m}(x)$，也即：
+
+$$\begin{align}
+\widehat{m}_{\mathrm{nw}}(x)=\underset{m}{\operatorname{argmin}} \sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right)\left(Y_{i}-m\right)^{2}
+\end{align}$$
+
+- 本质上，以上就是一个
+$Y$对截距项的**加权回归**（Weighted regression）估计量。
+
 
 ---
 
-### 局部线性估计：渐进近似的另一种选择
+### 2.2 滚动箱组回归：操作步骤
 
-> Nadaraya-Watson (NW)估计量的局部近似选择为
+**滚动箱组线性回归**（Rolling regression）的操作步骤如下：
+
+
+- 根据计算点
+$X=x_j$，按照特定谱宽
+$h$，划分出若干**箱组**（bins）（箱组会有重叠）：
+$\{b_1,b_2,\cdots,b_q\}$，其中
+$b_{j}=[x_j-h,x_j +h]$。
+
+- 根据样本数据集
+$X_i$的实际情况，计算**矩形核函数**的权重值（
+$h=1$）：
+
+$$K\left(\frac{X_{i}-x_j}{h}\right)$$
+
+- 然后采用**加权OLS**方法计算不同箱组下仅含截距项的回归模型
+的截距系数
+$\widehat{m}(x) \simeq m(X)$
+
+$$Y=m(x)+e$$
+
+---
+
+### （示例）滚动箱组回归：设定箱组划分规则
+
+下面我们分别设定如下**箱组**划分规则：
+
+- 设定箱组取值中心点
+$(X=x_i),x_i \in (`r head(bin2$x)`, \cdots, `r tail(bin2$x)`)$
+
+- 确定核函数类型为**矩形核函数**<sup>a</sup>，谱宽设定为
+$h=1$。
+
+- 那么，可以得到箱组区块bins=`r paste0(bin2$bins[1:3], collapse="、")`
+$\ldots$`r paste0(bin2$bins[(n2-2):n2], collapse="、")`，箱组数`r n2`。
+
+- 采用加权OLS方法进行拟合，直接计算得到
+$\widehat{m}(x)$
+
+---
+
+### （示例）滚动箱组回归：数据计算表
+
+利用箱组均值估计公式，我们可以计算得到不同箱组的均值估计：
+
+
+```{r}
+tbl_m1 %>%
+  select(bd, bins,x, m1) %>%
+  unique() %>%
+  arrange(x) %>%
+  DT::datatable(options = list(dom = "tip", pageLength =6))%>%
+  formatRound(c(3:4),c(4))
+```
+
+- 基于设定的`x`表示
+$x_i \in (`r head(bin2$x)`,\cdots)$，共有
+$N=`r n2`$个
+
+- 箱组回归估计`m1`
+$=\widehat{m}(x_i)$
+
+---
+
+### （示例）滚动箱组回归：图形表达
+
+- 根据前面计算表的`r n2`个拟合数据对
+$(x_i,\widehat{m}(x_i))$，我们可以得到滚动箱组线性回归估计结果：
+
+```{r}
+#| out.height = 450
+p2
+```
+
+
+
+---
+
+### 2.3 局部线性回归：渐进近似的另一种选择
+
+> **回顾**：Nadaraya-Watson (NW)估计量的局部近似选择为
 $m(X)\simeq m(x)$
 
-**局部线性估计**方法则选择了另一种局部线性近似，也即：
+**局部线性回归**（Local linear regression, LLR）方法则选择了另一种局部线性近似，也即：
 
-$$m(X)\simeq m(x) + m^{\prime}(x)(X-x)$$
+$$\begin{align}
+m(X)\simeq m(x) + m^{\prime}(x)(X-x) \\
+\end{align}$$
 
 因此**局部线性**（LL）模型可以表达为：
 
 $$\begin{align}
 Y &= m(X) +e  \\
-&\simeq m(x) + m^{\prime}(x)(X-x) +e
+&\simeq m(x) + m^{\prime}(x)(X-x) +e \\
+& = \beta_0 + \beta_1\cdot(X-x) +e
 \end{align}$$
 
+- 以上模型可以视作为**一元线性回归模型**，其中
+$\beta_0 =m(x);\beta_1=m^{\prime}(x)$。
+
+- 我们的目标是估计得到
+$\widehat{m}(x)$，也即上述模型的**截距项**。
 
 ---
 
-### 局部线性估计：最小化问题
+### 2.3 局部线性回归：矩阵表达式
+
+前述一元线性模型也可以表达为如下矩阵形式：
 
 $$\begin{align}
-\left\{\widehat{m}_{\mathrm{LL}}(x), \widehat{m}_{\mathrm{LL}}^{\prime}(x)\right\}=\underset{\alpha, \beta}{\operatorname{argmin}} \sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right)\left(Y_{i}-\alpha-\beta\left(X_{i}-x\right)\right)^{2}
+Y &\simeq Z(X, x)^{\prime} \boldsymbol{\beta}(x)+e 
 \end{align}$$
 
+其中：
 
 $$\begin{align}
-Y &\simeq Z(X, x)^{\prime} \beta(x)+e \\
 Z(X, x) &=\left(\begin{array}{c}
 1 \\
 X-x
 \end{array}\right)\\
-\beta(x) &=\left(m(x), m^{\prime}(x)\right)^{\prime}
+\boldsymbol{\beta}(x) &=\left(m(x), m^{\prime}(x)\right)^{\prime}
 \end{align}$$
+
+
 
 ---
 
-### 局部线性估计：估计量
+### 2.3 局部线性回归：最小化问题求解
+
+对于前述渐近近似回归模型，最小化问题可以表达为：
+
+$$\begin{align}
+\left\{\widehat{m}_{\mathrm{LL}}(x), \widehat{m}_{\mathrm{LL}}^{\prime}(x)\right\}=
+\underset{\beta_0, \beta_1}{\operatorname{argmin}} \sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right)\left(Y_{i}-\beta_0-\beta_{1}\left(X_{i}-x\right)\right)^{2}
+\end{align}$$
+
+.fyi[
+
+我们可以发现两个有意思的结论：
+
+- 当谱宽趋近于无穷大时
+$h \rightarrow \infty$，局部线性估计量将趋近于全样本OLS估计量
+$\widehat{m}_{\mathrm{LL}}(x) \rightarrow \widehat{\beta}_0+\widehat{\beta}_1 x$。因为，此时所有样本的权重都会相等。
+
+- 局部线性估计量会同时得到在点
+$x$处，条件期望函数CEF的估计量
+$\widehat{m}(x)$，及其斜率
+$\widehat{m}^{\prime}(x)$。
+]
+ 
+
+---
+
+### 2.3 局部线性回归：估计量
+
+以**核函数**为权重，以及利用**加权最小二乘法**原理，可以证明局部线性回归的估计量为：
 
 
 $$\begin{aligned}
@@ -596,49 +1245,62 @@ $\boldsymbol{Y}$是
 ${Y_i}(x)^{\prime}$的堆栈形态
 
 
----
-exclude: true
-
-## Code script: Hensen bruce fig 19.1-b
-
-- 此代码仅用于生成本地图片，为提高渲染效率代码文件仅需运行一次。
-
-- 如更新代码，请更改`eval = TRUE`
-
-```{r, eval=TRUE}
-source("../Rscript/hensen21-fig19-1b.R", encoding = "UTF-8")
-```
 
 ---
 
-### （示例）箱组回归估计情形1：图形表达1/2
+### 2.3 局部线性回归：操作步骤
+
+**局部线性回归**（Local Linear regression）的操作步骤如下：
+
+- 根据计算点
+$X=x_j$，按照特定谱宽
+$h$，划分出若干**箱组**（bins）（箱组会有重叠）：
+$\{b_1,b_2,\cdots,b_q\}$，其中
+$b_{j}=[x_j-h,x_j +h]$。
+
+- 根据样本数据集
+$X_i$的实际情况，计算**高斯核函数**的权重值（
+$h=1/\sqrt{3}$）：
+
+$$K\left(\frac{X_{i}-x_j}{h}\right)$$
+
+- 然后采用**加权OLS**方法计算不同箱组下一元回归模型的截距系数
+$\widehat{m}(x) \simeq m(X)$
+
+$$\begin{align}
+Y &= m(X) +e  \\
+&\simeq m(x) + m^{\prime}(x)(X-x) +e 
+\end{align}$$
+
+---
+
+### （示例）局部线性回归：数据计算表
+
+利用局部线性回归估计公式，我们可以计算得到不同箱组的估计：
+
 
 ```{r}
-#| out.height = 450
-p00
+tbl_m2 %>%
+  select(bd, bins,x, m2) %>%
+  unique() %>%
+  arrange(x) %>%
+  DT::datatable(options = list(dom = "tip", pageLength =6))%>%
+  formatRound(c(3:4),c(4))
 ```
+
+- 基于设定的`x`表示
+$x_i \in (`r head(bin2$x)`,\cdots)$，共有
+$N=`r n2`$个
+
+- 箱组回归估计`m2`
+$=\widehat{m}(x_i)$
 
 ---
 
-### （示例）箱组回归估计情形2：图形表达2/2
+### （示例）局部线性回归估计：图形表达
 
-```{r}
-#| out.height = 450
-p1
-```
-
----
-
-### （示例）滚动箱组回归估计情形：图形表达
-
-```{r}
-#| out.height = 450
-p2
-```
-
----
-
-### （示例）局部线性回归估计情形：图形表达
+- 根据前面计算表的`r n2`个拟合数据对
+$(x_i,\widehat{m}(x_i))$，我们可以得到局部线性回归估计结果：
 
 ```{r}
 #| out.height = 450
@@ -653,6 +1315,884 @@ p3
 #| out.height = 450
 p_all
 ```
+
+
+- 尽管三种回归估计方法都较好地估计了真实CEF的趋势，但是**局部线性回归**LLR拟合方法要更平滑。
+
+---
+
+### 2.4 局部多项式回归：模型表达
+
+**局部多项式回归**（Local Polynomial regression）模型可以表达为：
+
+$$\begin{aligned}
+Y &=m(X)+e \\
+& \simeq m(x)+m^{\prime}(x)(X-x)+\cdots+m^{(p)}(x) \frac{(X-x)^{p}}{p !}+e \\
+&=Z(X, x)^{\prime} \beta(x)+e_{i}
+\end{aligned}$$
+
+- 其中：
+
+$$\begin{align}
+Z(X, x)=\left(\begin{array}{c}
+1 \\
+X-x \\
+\vdots \\
+\frac{(X-x)^{p}}{p !}
+\end{array}\right) 
+\quad \quad
+\beta(x)=\left(\begin{array}{c}
+m(x) \\
+m^{\prime}(x) \\
+\vdots \\
+m^{(p)}(x)
+\end{array}\right)
+\end{align}$$
+
+---
+
+### 2.4 局部多项式回归：估计量
+
+同样地，以**核函数**为权重，可以证明**局部多项式回归**估计量的理论公式为：
+
+$$\begin{align}
+\widehat{\beta}_{\mathrm{LP}}(x) &=\left(\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right) Z_{i}(x) Z_{i}(x)^{\prime}\right)^{-1}\left(\sum_{i=1}^{n} K\left(\frac{Y_{i}-x}{h}\right) Z_{i}(x) Y_{i}\right) \\
+&=\left(\boldsymbol{Z}^{\prime} \boldsymbol{K} \boldsymbol{Z}\right)^{-1} \boldsymbol{Z}^{\prime} \boldsymbol{K} \boldsymbol{Y}
+\end{align}$$
+
+- 其中
+$Z_i(x)=Z(X_i,x)$
+
+---
+
+### 2.4 局部多项式回归：特点
+
+.fyi[
+
+- 局部多项式回归LPR具有一般性：
+
+> 其中有两种特定情形：a）当
+$p=0$时为Nadaraya-Watson回归估计；b）当
+$p=1$时为局部线性回归估计（LL）
+
+]
+
+.fyi[
+
+- 估计结果需要在阶数
+$p$和局部平滑谱宽
+$h$之间寻求平衡。
+
+> 一方面如果增加多项式阶数
+$p$，可以改进模型渐近精度，因而倾向选择更大的谱宽
+$h$。另一方面，增加多项式阶数
+$p$同时也会导致估计量方差的增大，估计可靠性会降低。
+
+]
+
+
+---
+layout: false
+class: center, middle, duke-orange,hide_logo
+name: performance
+
+# 3.估计效果(Performance Analysis)
+
+### [3.1 渐近偏误(Asymptotic Bias)](#asym-bias)
+
+### [3.2 渐近方差(Asymptotic Variance)](#asym-var)
+
+### [3.3 渐近均方误(AMSE & AIMSE)](#AMSE)
+
+### [3.4 谱宽选择(Bandwidth Selection)](#band-sel)
+
+### [3.5 渐近分布(Asymptotic Distribution)](#asym-dist)
+
+### [3.6 方差估计(Variance Estimation)](#var-est)
+
+---
+layout: true
+
+<div class="my-header-h2"></div>
+
+<div class="watermark1"></div>
+
+<div class="watermark2"></div>
+
+<div class="watermark3"></div>
+
+<div class="my-footer"><span>huhuaping@  &emsp;&emsp; <a href="#chapter-RDD">  </a>
+&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
+<a href="#performance"> 3.估计效果(Performance Analysis) </a> </span></div> 
+
+---
+name: asym-bias
+
+### 3.1 渐近偏误：估计量的期望
+
+
+期望：
+
+$$\begin{align}
+\mathbb{E}\left[\widehat{m}_{\mathrm{nw}}(x) \mid \boldsymbol{X}\right]=\frac{\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right) \mathbb{E}\left[Y_{i} \mid X_{i}\right]}{\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right)}=\frac{\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right) m\left(X_{i}\right)}{\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right)}
+\end{align}$$
+
+---
+
+### 3.1 渐近偏误：NW和LL下估计量的期望
+
+对于局部NW估计量有：
+
+$$\begin{align}
+&\mathbb{E}\left[\hat{m}_{\mathrm{nw}}(x) \mid \boldsymbol{X}\right]=m(x)+h^{2} B_{\mathrm{nw}}(x)+o_{p}\left(h^{2}\right)+O_{p}\left(\sqrt{\frac{h}{n}}\right) \\
+&\qquad B_{\mathrm{nw}}(x)=\frac{1}{2} m^{\prime \prime}(x)+f(x)^{-1} f^{\prime}(x) m^{\prime}(x) 
+\end{align}$$
+
+- 其中：
+$\qquad B_{\mathrm{nw}}(x)=\frac{1}{2} m^{\prime \prime}(x)+f(x)^{-1} f^{\prime}(x) m^{\prime}(x)$
+
+对于局部线性LL估计量有：
+
+$$\begin{align}
+\mathbb{E}\left[\hat{m}_{\mathrm{LL}}(x) \mid \boldsymbol{X}\right]=m(x)+h^{2} B_{\mathrm{LL}}(x)+o_{p}\left(h^{2}\right)+O_{p}\left(\sqrt{\frac{h}{n}}\right)
+\end{align}$$
+
+- 其中
+$\qquad B_{\mathrm{LL}}(x)=\frac{1}{2} m^{\prime \prime}(x)$
+
+---
+
+### 3.1 渐近偏误：定义
+
+**渐近偏误**（Asymptotic Bias）：我们称
+$h^2 B_{\mathrm{nw}}(x)$和
+$h^2 B_{\mathrm{LL}}(x)$为**渐近偏误**。
+
+---
+exclude: true
+
+## Code script: Hensen bruce fig 19-2
+
+- 此代码仅用于生成本地图片，为提高渲染效率代码文件仅需运行一次。
+
+- 如更新代码，请更改`eval = TRUE`
+
+```{r, eval=TRUE}
+source("../Rscript/hensen21-fig19-2.R", encoding = "UTF-8")
+```
+
+---
+
+### （示例）不同谱宽下渐近偏误的表现
+
+- 根据前面计算表的`r n2`个拟合数据对
+$(x_i,\widehat{m}(x_i))$，我们可以得到滚动箱组线性回归估计结果：
+
+```{r}
+#| out.height = 450
+p_bias
+```
+
+
+---
+name: asym-var
+
+### 3.2 渐近方差：
+
+
+渐近方差（Asymptotic Variance）
+
+$$\begin{align}
+\hat{m}_{\mathrm{nw}}(x)-\mathbb{E}\left[\hat{m}_{\mathrm{nw}}(x) \mid \boldsymbol{X}\right]=\frac{\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right) e_{i}}{\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right)}
+\end{align}$$
+
+$$\begin{align}
+\operatorname{var}\left[\hat{m}_{\mathrm{nw}}(x) \mid \boldsymbol{X}\right]=\frac{\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right)^{2} \sigma^{2}\left(X_{i}\right)}{\left(\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right)\right)^{2}}
+\end{align}$$
+
+---
+
+### 3.2 渐近方差：
+
+$$\begin{align}
+&\operatorname{var}\left[\hat{m}_{\mathrm{nw}}(x) \mid \boldsymbol{X}\right]=\frac{R_{K} \sigma^{2}(x)}{f(x) n h}+o_{p}\left(\frac{1}{n h}\right) \\
+&\operatorname{var}\left[\hat{m}_{\mathrm{LL}}(x) \mid \boldsymbol{X}\right]=\frac{R_{K} \sigma^{2}(x)}{f(x) n h}+o_{p}\left(\frac{1}{n h}\right)
+\end{align}$$
+
+- **核函数**
+$K(u)$的**粗糙度**（roughness）定义为：
+$R_{K}=\int_{-\infty}^{\infty} K(u)^{2} d u$
+
+
+---
+name: amse
+
+### 3.3 渐近均方误：定义
+
+**渐近均方误**（Asymptotic MSE, AMSE）：是估计量
+$\widehat{m}(x)$的**平方渐近偏误**以及**渐近误差**二者之和。定义为：
+
+$$\begin{align}
+\operatorname{AMSE}(x) \stackrel{\text { def }}{=} h^{4} B(x)^{2}+\frac{R_{K} \sigma^{2}(x)}{n h f(x)}
+\end{align}$$
+
+---
+
+### 3.3 渐近均方误：连续情形下
+
+**渐近积分均方误**(Asymptotic integrated MSE, AIMSE)：类似地定义如下：
+
+$$\begin{align}
+\operatorname{AIMSE} &\stackrel{\text { def }}{=} \int_{S} \operatorname{AMSE}(x) f(x) w(x) d x \\
+&=\int_{S}\left(h^{4} B(x)^{2}+\frac{R_{K} \sigma^{2}(x)}{n h f(x)}\right) f(x) w(x) d x \\
+&=h^{4} \bar{B}+\frac{R_{K}}{n h} \bar{\sigma}^{2}
+\end{align}$$
+
+- 其中：
+
+$$\begin{aligned}
+\bar{B} &=\int_{S} B(x)^{2} f(x) w(x) d x \\
+\bar{\sigma}^{2} &=\int_{S} \sigma^{2}(x) w(x) d x
+\end{aligned}$$
+
+
+
+---
+name: band-sel
+
+### 3.4 谱宽选择：最优谱宽
+
+最小化**渐近积分均方误**目标下，可以得到**最优谱宽**（Optimal Bandwidth）：
+
+$$\begin{align}
+h_{0}=\left(\frac{R_{K} \bar{\sigma}^{2}}{4 \bar{B}}\right)^{1 / 5} n^{-1 / 5}
+\end{align}$$
+
+- 此时，随着
+$h \sim n^{-1 / 5}$，则有
+$\text {AIMSE }[\hat{m}(x)]=O\left(n^{-4 / 5}\right)$
+
+- 因此，可以计算出上述最优谱宽下的**渐近积分均方误**：
+
+$$\begin{align}
+\operatorname{AIMSE}_{0} \simeq 1.65\left(R_{K}^{4} \bar{B} \bar{\sigma}^{8}\right)^{1 / 5} n^{-4 / 5}
+\end{align}$$
+
+---
+
+### 3.4 谱宽选择：最优谱宽
+
+至此，我们可以得到最优谱宽的理论计算公式：
+
+$$\begin{align}
+h_{0}=\left(\frac{R_{K}}{4}\right)^{1 / 5}\left(\frac{\bar{\sigma}^{2}}{n \bar{B}}\right)^{1 / 5} \simeq 0.58\left(\frac{\bar{\sigma}^{2}}{n \bar{B}}\right)^{1 / 5}
+\end{align}$$
+
+$$\begin{align}
+\bar{B}=\mathbb{E}\left[B(X)^{2} w(X)\right]=\mathbb{E}\left[\left(\frac{1}{2} m^{\prime \prime}(X)\right)^{2} \mathbb{1}\left\{\xi_{1} \leq X \leq \xi_{2}\right\}\right] .
+\end{align}$$
+
+
+
+---
+
+### 3.4 谱宽选择：参考谱宽Rot
+
+Fan and Gijbels(1996)提出了一种**经验参考谱宽**（Rule of Thumb  bandwidth,ROT）的计算办法：
+
+$$\begin{align}
+h_{\text {rot }}=0.58\left(\frac{\widehat{\sigma}^{2}\left(\xi_{2}-\xi_{1}\right)}{n \widehat{B}}\right)^{1 / 5} 
+\end{align}$$
+
+
+- 首先构建**先验q阶多项式回归模型**，并分别估计得到
+$\widehat{m}(x)$及其二阶导
+$\widehat{m}^{\prime \prime}(x)$
+
+$$\begin{align}
+{m}(x)&={\beta}_{0}+{\beta}_{1} x+{\beta}_{2} x^{2}+\cdots+{\beta}_{q} x^{q} + {\epsilon} \\
+\end{align}$$
+
+- 并使用
+$\overline{B}$的**矩估计量**：
+$\widehat{B}=\frac{1}{n} \sum_{i=1}^{n}\left(\frac{1}{2} \hat{m}^{\prime \prime}\left(X_{i}\right)\right)^{2} \mathbb{1}\left\{\xi_{1} \leq X_{i} \leq \xi_{2}\right\}$
+
+- 其次，假定随机干扰项为同方差，也即
+$\mathbb{E}\left[e^{2} \mid X\right]=\sigma^{2}$，从而可以使用：
+
+$$\begin{align} 
+\bar{\sigma}^{2}=\sigma^{2}\left(\xi_{2}-\xi_{1}\right)
+\approx \hat{\sigma}^{2}\left(\xi_{2}-\xi_{1}\right)
+\end{align}$$
+
+---
+
+### 3.4 谱宽选择：参考谱宽Rot（主要步骤）
+
+参考谱宽rot的主要机选步骤具体包括：
+
+- 步骤1：确定权重取值范围
+$w(x)=\mathbb{1}\left\{\xi_{1} \leq x \leq \xi_{2}\right\}$
+
+- 步骤2：构建**先验q阶多项式回归模型**（建议为4阶），并分别估计得到
+$\widehat{m}(x)$及其二阶导
+$\widehat{m}^{\prime \prime}(x)$
+
+
+$$\begin{align}
+{m}(x)&={\beta}_{0}+{\beta}_{1} x+{\beta}_{2} x^{2}+\cdots+{\beta}_{q} x^{q} + {\epsilon} \\
+\widehat{m}(x)&=\hat{\beta}_{0}+\hat{\beta}_{1} x+\hat{\beta}_{2} x^{2}+\cdots+\hat{\beta}_{q} x^{q} \\
+\widehat{m}^{\prime \prime}(x) &=2\hat{\beta}_{2}+6\hat{\beta}_{3} x + 12\hat{\beta}_{4} x^{2}+\cdots+q(q-1)\hat{\beta}_{q}x^{q-2} 
+\end{align}$$
+
+- 步骤3：利用上述估计结果计算
+
+$$\begin{align}
+\widehat{B}=\frac{1}{n} \sum_{i=1}^{n}\left(\frac{1}{2} \hat{m}^{\prime \prime}\left(X_{i}\right)\right)^{2} \mathbb{1}\left\{\xi_{1} \leq X_{i} \leq \xi_{2}\right\}
+\end{align}$$
+
+---
+
+### 3.4 谱宽选择：参考谱宽Rot（主要步骤）
+
+参考谱宽rot的主要机选步骤具体包括：
+
+- 步骤4：计算上述**先验q阶多项式回归模型**的回归误差方差
+$\hat{\sigma}^2$
+
+$$\hat{\sigma}^2 = \frac{\sum{\hat{\epsilon}^2}}{n-q-1}$$
+
+- 步骤5：根据上述全部结果计算得到经验谱宽：
+
+$$\begin{align}
+h_{\text {rot }}=0.58\left(\frac{\widehat{\sigma}^{2}\left(\xi_{2}-\xi_{1}\right)}{n \widehat{B}}\right)^{1 / 5} 
+\end{align}$$
+
+
+---
+exclude: true
+
+## Code script: Hensen bruce fig 19-4
+
+- 此代码仅用于生成本地图片，为提高渲染效率代码文件仅需运行一次。
+
+- 如更新代码，请更改`eval = TRUE`
+
+```{r, eval=TRUE}
+source("../Rscript/hensen21-fig19-4.R", encoding = "UTF-8")
+```
+
+---
+
+### （示例）参考谱宽的计算：数据散点图
+
+- 我们继续使用前述的蒙特卡洛模拟数据集：
+
+```{r}
+#| out.height = 450
+p0
+```
+
+---
+
+### （示例）参考谱宽的计算：多项式回归
+
+下面我们按前述步骤来计算参考谱宽值
+$h_{rot}$：
+
+- **步骤1**：根据案例数据集，设定权重取值范围
+$\left\{\xi_{1} \leq x \leq \xi_{2}\right\}=\{0,10\}$
+
+- **步骤2**：构建多项式回归
+
+```{r, results="asis"}
+varx <- c("X","X^2","X^3","X^4")
+lx_out <- xmerit::lx.psm(x = varx, n.row = 5)
+```
+
+> 直接使用OLS进行估计，得到估计方程：
+
+```{r, results="asis"}
+mod_poly <- formula("Y~X +I(X^2) +I(X^3) +I(X^4)" )
+lx_est <- xmerit::lx.est(lm.mod = mod_poly, 
+                         lm.dt = dt, lm.n = 5,
+                         opt = c("s"),
+                         digits = c(4,4,2,4))
+
+```
+
+> 进而得到拟合值
+$\widehat{m}(x)$及其二阶导
+$\widehat{m}^{\prime \prime}(x)$
+
+$$\begin{align}
+\widehat{m}(x)&=+0.4943+0.6986x_i-0.2807x^2_i
++0.0326x^3_i-0.0012x^4_i \\ 
+\widehat{m}^{\prime \prime}(x)&=-2\times 0.2807+6\times0.0326x_i-12\times0.0012x^2_i \\ 
+\end{align}$$
+
+---
+
+### （示例）参考谱宽的计算：多项式回归
+
+- 拟合值
+$\widehat{m}(x)$及其二阶导
+$\widehat{m}^{\prime \prime}(x)$以及残差
+$\hat{\epsilon}$
+
+```{r}
+tibble(mx=mx, mx_q2=mx_q2,epsilon=e) %>%
+  DT::datatable(
+    caption = "多项式回归计算表",
+    options = list(dom = "tip", pageLength=8)
+    ) %>%
+  formatRound(1:3,digits = 4)
+```
+
+---
+
+### （示例）参考谱宽的计算：结果
+
+
+- 步骤3：利用上述估计结果计算
+
+$$\begin{align}
+\widehat{B}=\frac{1}{n} \sum_{i=1}^{n}\left(\frac{1}{2} \hat{m}^{\prime \prime}\left(X_{i}\right)\right)^{2} \mathbb{1}\left\{\xi_{1} \leq X_{i} \leq \xi_{2}\right\}
+= `r number(b,0.0001)`
+\end{align}$$
+
+- 步骤4：多项式模型的回归误差方差
+
+$$\hat{\sigma}^2 = \frac{\sum{\hat{\epsilon}^2}}{n-q-1}=`r number(sig, 0.0001)`$$
+
+- 步骤5：根据上述全部结果计算得到经验谱宽：
+
+$$\begin{align}
+h_{\text {rot }}&=0.58\left(\frac{\widehat{\sigma}^{2}\left(\xi_{2}-\xi_{1}\right)}{n \widehat{B}}\right)^{1 / 5}  = 0.58 \times \left(\frac{`r number(sig,0.0001)`\times \left(10-0\right)}{100 \times `r number(b,0.0001)`}\right)^{1 / 5} 
+= `r number(hrot,0.0001)`
+\end{align}$$
+
+---
+
+### 3.4 谱宽选择：交叉验证谱宽（目标问题）
+
+我们期望选择谱宽，以实现估计量
+$\widehat{m}(x, h)$最小化**积分均方误**（Integrated mean-squared error, IMSE），也即：
+
+$$\begin{align}
+\operatorname{IMSE}_{n}(h)=\int_{S} \mathbb{E}\left[(\widehat{m}(x, h)-m(x))^{2}\right] f(x) w(x) d x
+\end{align}$$
+
+- 其中
+$f(x)$为
+$X$的边际密度（marginal density）
+
+- 
+$w(x)$为可积分权重函数（integrable weight function）
+
+---
+
+### 3.4 谱宽选择：交叉验证谱宽（可行计算）
+
+上述最小化问题中，偏差值
+$(\widehat{m}(x, h)-m(x))$可以通过**留一法**下的预测误差来代替，也即：
+
+$$\begin{align}
+\tilde{e}_{i}(h)=Y_{i}-\tilde{m}_{-i}\left(X_{i}, h\right)
+\end{align}$$
+
+因此，上述最小化问题
+$IMSE_n(h)$的一个**可行计算方案**可以表达为如下的**交叉验证准则函数**（Cross-Validation Criterion）：
+
+$$\begin{align}
+\operatorname{CV}(h)=\frac{1}{n} \sum_{i=1}^{n} \widetilde{e}_{i}(h)^{2} w\left(X_{i}\right)
+\end{align}$$
+
+---
+
+### 3.4 谱宽选择：交叉验证谱宽（准则函数）
+
+对于**交叉验证准则函数**（Cross-Validation Criterion）：
+
+$$\begin{align}
+\operatorname{CV}(h)=\frac{1}{n} \sum_{i=1}^{n} \widetilde{e}_{i}(h)^{2} w\left(X_{i}\right)
+\end{align}$$
+
+我们可以证明它是去掉一个样本的积分均方误
+$IMSE_(n-1)(h)$加上一个常数项的**无偏估计**，也即：
+
+$$\mathbb{E}[\mathrm{CV}(h)]=\bar{\sigma}^{2}+\operatorname{IMSE}_{n-1}(h)$$
+
+- 其中：
+$\bar{\sigma}^{2}=\mathbb{E}\left[e^{2} w(X)\right]$，它是不依赖于谱宽
+$h$的。
+
+- 显然，最小化
+$\mathbb{E}[\mathrm{CV}(h)]$和最小化
+$\operatorname{IMSE}_{n-1}(h)$将是等价的。
+
+- 而且，当
+$n$比较大时，最小化
+$\operatorname{IMSE}_{n-1}(h)$和最小化
+$\operatorname{IMSE}_{n}(h)$也将是等价的，二者各自得到的谱宽也是无偏的。
+
+---
+
+### 3.4 谱宽选择：交叉验证谱宽（受约束）
+
+另外，为了避免谱宽值选择过小，需要给定约束条件
+$h \geq h_{\ell}$，此时：
+
+$$
+h_{\mathrm{CV}}=\underset{h \geq h_{\ell}}{\operatorname{argmin}} \mathrm{CV}(h)
+$$
+
+---
+
+### 3.4 谱宽选择：交叉验证谱宽（主要过程）
+
+因此，最优交叉验证谱宽选择的主要过程如下：
+
+- 构建
+$h$的序贯数值（grid value）
+$[h_1, h_2, \cdots, h_J]$，并评估交叉效用准则函数的最小化取值
+$CV(h_j),j\in(1,2,\cdots,J)$，从而得到最优谱宽：
+
+$$
+h_{\mathrm{CV}}=\underset{h \in\left[h_{1}, h_{2}, \ldots, h_{J}\right]}{\operatorname{argmin}} \operatorname{CV}(h)
+$$
+.fyi[
+
+- 需要注意的是，以上方法得到的谱宽理论上可以是无界化的。意味着，交叉验证准则函数
+$CV(h)$是单调下降的，以至于最优谱宽
+$h = \infty$。
+
+- 此时，将表明**全样本**回归估计也可能是一个最优结果。也即，使用全样本数据，NW估计方法有
+$\widehat{m}(x)=\overline{Y}$；而局部线性估计方法则有
+$\widehat{m}(x)=\hat{\beta}_0 +\hat{\beta}_1x$
+
+]
+
+---
+
+### 3.4 谱宽选择：交叉验证谱宽（计算步骤）
+
+- 步骤1：设定**初始值**。也即选定一个**参考谱宽**作为初始值，例如前面提到的**经验谱宽**
+$h_{rot}$。
+
+- 步骤2：设定**调参谱宽**（tuning bandwidth）。也即给定待评估的谱宽范围，及其待评估序贯值（grid value）。
+
+> 
+- 一个经验谱宽范围可供参考：
+$[h_{rot}/3, 3h_{rot}]$。
+- 范围内的待评估序贯值的个数
+$g$也是需要做出尝试性选择。
+
+
+---
+
+### （示例）交叉验证谱宽的计算：数据集
+
+- 我们继续使用前述的蒙特卡洛模拟数据集：
+
+```{r}
+#| out.height = 450
+p0
+```
+
+
+---
+
+### （示例）交叉验证谱宽的计算：规则
+
+- 步骤1：设定**经验谱宽**
+$h_{rot}=`r number(hrot,0.0001)`$作为**初始值**。。
+
+- 步骤2：设定**调参谱宽**（tuning bandwidth）。
+> 
+- 一个经验谱宽范围可供参考：
+$[h_{rot}/3, 3h_{rot}]=[`r number(hrot/3,0.0001)`, `r number(3*hrot,0.0001)`]$。
+- 给定范围内的搜寻总数为
+$n=`r hn`$。则待评估序贯值为
+$h\in (`r paste0(number(hh[1:5],0.0001), collapse=', ')`, \cdots,`r paste0(number(hh[(hn-3):hn],0.0001), collapse=', ')`)$。
+
+---
+exclude: true
+
+### R chunk: Helper function
+
+```{r}
+# help function to get loo sum square error
+
+get_loo <- function(df) {
+  out <- df %>%
+    tibble::as_tibble() %>%
+    janitor::clean_names() %>%
+    rename_all(~ paste0("loo_", 
+                        str_pad(1:n,
+                                side = "l", pad = "0", 
+                                width = 3))) %>%
+    add_column(id = 1:nrow(.),h = hh ) %>%
+    pivot_longer(names_to = "loo",
+                 values_to = "ei_sqr",
+                 all_of(contains("loo_"))) 
+  return(out)
+}
+
+
+```
+
+
+---
+
+### （示例）交叉验证谱宽的计算：NW方法下的预测误差平方
+
+```{r}
+get_loo(df = nw) %>%
+  DT::datatable(caption = "NW方法LOO交叉验证的预测误差平方",
+                options = list(dom ="tip", pageLength =8)) %>%
+  formatRound(c(2,4), digits = 4)
+```
+
+.footnote[
+
+<sup>a</sup> `loo`表示交叉验证**留一法**，例如`loo_001`表示第1个样本数据不进入局部回归估计。
+
+]
+
+
+
+---
+
+### （示例）交叉验证谱宽的计算：LL方法下的预测误差平方
+
+```{r}
+get_loo(df = LL) %>%
+  DT::datatable(caption = "LL方法LOO交叉验证的预测误差平方",
+                options = list(dom ="tip", pageLength =8)) %>%
+  formatRound(c(2,4), digits = 4)
+```
+
+.footnote[
+
+<sup>a</sup> `loo`表示交叉验证**留一法**，例如`loo_001`表示第1个样本数据不进入局部回归估计。
+
+]
+
+
+---
+
+### （示例）交叉验证谱宽的计算：CV计算表
+
+```{r}
+tbl_cvc %>%
+  add_column(id = 1:nrow(.), .before = "h_tune") %>%
+  DT::datatable(caption = "NW和LL方法下的CV计算表",
+                options = list(dom ="tip", pageLength =8)) %>%
+  formatRound(c(2:4), digits = 4)
+```
+
+---
+
+### （示例）交叉验证谱宽的计算：谱宽与CV变化
+
+```{r}
+#| out.height = 450
+p_cvc
+```
+
+---
+
+### （示例）最优谱宽下的估计表
+
+
+```{r}
+tbl_mxh %>%
+  add_column(index = 1:nrow(.), .before = "xg") %>%
+  rename("mx_rot"='mx1', "mx_cv"='mx2') %>%
+  DT::datatable(caption = "使用不同谱宽下LL方法对m(x)的估计结果",
+                options = list(dom ="tip", pageLength =8)) %>%
+  formatRound(c(2,3:4), digits = c(2,4,4))
+```
+
+
+---
+
+### （示例）真实的条件期望函数m(x)
+
+```{r}
+#| out.height = 450
+p_true
+```
+
+$$\begin{align}
+m(X) =\frac{sin(\frac{\pi}{4}\cdot(X_i-2))}{\frac{\pi}{4}\cdot(X_i-2)} 
+\end{align}$$
+
+
+---
+
+### （示例）LL方法下使用ROT谱宽估计得到的m(x)
+
+```{r}
+#| out.height = 450
+p_mxh1
+```
+
+---
+
+### （示例）LL方法下使用最优CV谱宽估计得到的m(x)
+
+```{r}
+#| out.height = 450
+p_mxh2
+```
+
+---
+
+### （示例）LL方法下使用不同谱宽估计得到的m(x)：对比
+
+```{r}
+#| out.height = 450
+p_mxh
+```
+
+---
+
+### （示例）：模拟数据集
+
+为了更好地进行数据验证，我们将根据如下规则生成蒙特卡洛模拟数据集：
+
+$$\begin{align}
+m(X) =\frac{sin(\frac{\pi}{4}\cdot(X_i-2))}{\frac{\pi}{4}\cdot(X_i-2)} 
+\end{align}$$
+
+- 此时，我们具有**上帝视角**，实际上已经知道**数据生成机制**（DGP）
+
+- 此时，我们心里面已知真实模型为**非线性的**
+
+
+---
+name: asym-dist
+
+### 3.5 渐近分布：渐近正态分布
+
+渐近分布（Asymptotic Distribution）
+
+- 对于局部NW估计：
+
+$$\begin{align}
+\sqrt{n h}\left(\widehat{m}_{\mathrm{nw}}(x)-m(x)-h^{2} B_{\mathrm{nw}}(x)\right) \underset{d}{\longrightarrow} \mathrm{N}\left(0, \frac{R_{K} \sigma^{2}(x)}{f(x)}\right)
+\end{align}$$
+
+- 对于局部线性估计：
+
+$$\begin{align}
+\sqrt{n h}\left(\widehat{m}_{\mathrm{LL}}(x)-m(x)-h^{2} B_{\mathrm{LL}}(x)\right) \underset{d}{\longrightarrow} \mathrm{N}\left(0, \frac{R_{K} \sigma^{2}(x)}{f(x)}\right)
+\end{align}$$
+
+---
+
+### 3.5 渐近分布：超平滑情形
+
+$$\begin{align}
+\sqrt{n h}\left(\hat{m}_{\mathrm{nw}}(x)-m(x)\right) &\underset{d}{\longrightarrow} \mathrm{N}\left(0, \frac{R_{K} \sigma^{2}(x)}{f(x)}\right) \\
+\sqrt{n h}\left(\widehat{m}_{\mathrm{LL}}(x)-m(x)\right) &\underset{d}{\longrightarrow} \mathrm{N}\left(0, \frac{R_{K} \sigma^{2}(x)}{f(x)}\right)
+\end{align}$$
+
+---
+name: var-est
+
+### 3.6 方差估计：条件方差
+
+$$\begin{align}
+\sigma^{2}(x)=\operatorname{var}[Y \mid X=x]=\mathbb{E}\left[e^{2} \mid X=x\right]
+\end{align}$$
+
+- NW方法下条件方差的一个**理想**估计为：
+
+$$\begin{align}
+\bar{\sigma}^{2}(x)=\frac{\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right) e_{i}^{2}}{\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right)}
+\end{align}$$
+
+- NW方法下条件方差的一个**可行**估计为：
+
+$$\begin{align}
+\widehat{\sigma}^{2}(x)=\frac{\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right) \widetilde{e}_{i}^{2}}{\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right)} .
+\end{align}$$
+
+> 其中
+$\widetilde{e}_{i}=Y_{i}-\hat{m}_{-i}\left(X_{i}\right)$为**留一法**下的预测误差（leave-one-out prediction error）
+
+
+
+---
+
+### 3.6 方差估计：直接公式
+
+如前所属，NW方法、LL方法和LP方法的CEF估计可以统一表达为：
+
+$$\begin{align}
+\widehat{\beta}(x) &=\left(\boldsymbol{Z}^{\prime} \boldsymbol{K} \boldsymbol{Z}\right)^{-1}\left(\boldsymbol{Z}^{\prime} \boldsymbol{K} \boldsymbol{Y}\right) \\
+&=\left(\boldsymbol{Z}^{\prime} \boldsymbol{K} \boldsymbol{Z}\right)^{-1}\left(\boldsymbol{Z}^{\prime} \boldsymbol{K} \boldsymbol{m}\right)+\left(\boldsymbol{Z}^{\prime} \boldsymbol{K} \boldsymbol{Z}\right)^{-1}\left(\boldsymbol{Z}^{\prime} \boldsymbol{K} \boldsymbol{e}\right)
+\end{align}$$
+
+- 那么，我们可以直接使用下列条件方差公式：
+
+$$\begin{align}
+\boldsymbol{V}_{\widehat{\beta}}(x)=\operatorname{var}[\widehat{\beta} \mid \boldsymbol{X}]=\left(\boldsymbol{Z}^{\prime} \boldsymbol{K} \boldsymbol{Z}\right)^{-1}\left(\boldsymbol{Z}^{\prime} \boldsymbol{K} \boldsymbol{D} \boldsymbol{K} \boldsymbol{Z}\right)\left(\boldsymbol{Z}^{\prime} \boldsymbol{K} \boldsymbol{Z}\right)^{-1}
+\end{align}$$
+
+- 其中，我们可以直接使用**平方误差**
+$\widehat{e}_i^2$或者**平方预测误差**
+$\tilde{e}_i^2$：
+
+$$\begin{align}
+\widehat{\boldsymbol{V}}_{\widehat{\beta}}(x)=\left(\boldsymbol{Z}^{\prime} \boldsymbol{K} \boldsymbol{Z}\right)^{-1}\left(\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right)^{2} Z_{i}(x) Z_{i}(x)^{\prime} \widetilde{\boldsymbol{e}}_{i}^{2}\right)\left(\boldsymbol{Z}^{\prime} \boldsymbol{K} \boldsymbol{Z}\right)^{-1}
+\end{align}$$
+
+---
+
+### 3.6 方差估计：渐近公式
+
+更为简洁地，我们也可以使用如下条件方差的渐近公式：
+
+$$\begin{align}
+\widehat{V}_{\widehat{m}(x)}=\frac{R_{K} \widehat{\sigma}^{2}(x)}{n h \widehat{f}(x)}
+\end{align}$$
+
+- 其中：
+
+$$\begin{align}
+\widehat{f}(x)=\frac{1}{n b} \sum_{i=1}^{n} K\left(\frac{X_{i}-x}{b}\right)
+\end{align}$$
+
+
+$$\begin{align}
+\widehat{\sigma}^{2}(x)=\frac{\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right) \widetilde{e}_{i}^{2}}{\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right)} .
+\end{align}$$
+
+---
+
+### 3.6 方差估计：置信带
+
+**逐点置信区间**（Pointwise Conﬁdence Interval）
+
+$$\begin{align}
+\widehat{m}(x) \pm t_{1-\alpha/2}(n-1) \cdot \sqrt{\widehat{V}_{\widehat{m}(x)}}\\
+\widehat{m}(x) \pm 1.96 \sqrt{\widehat{V}_{\widehat{m}(x)}}
+\end{align}$$
+
+---
+
+### （工资案例）：
+
+
+
+---
+
+### （工资案例）：
+
 
 ---
 layout: false

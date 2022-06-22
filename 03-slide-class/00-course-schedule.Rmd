@@ -286,6 +286,31 @@ include_graphics("../pic/chpt00-text-CF-cover.jpg")
 
 ---
 
+### 参考教材《影响评估、处置效应及因果分析》
+
+- Frohlich M, Sperlich S. Impact evaluation, treatment effects and causal analysis[M]. New York:  Cambridge University Press, 2019.
+
+```{r, out.width='250px'}
+include_graphics("../pic/chpt00-text-IETE-cover.jpg")
+```
+
+---
+
+### 参考教材《匹配、断点回归、双重差分及其扩展》
+
+- Lee M.  Matching, regression discontinuity, difference in differences, and beyond[M]. New York: Oxford University Press, 2016. 
+
+```{r, out.width='250px'}
+include_graphics("../pic/chpt00-text-match-lee-cover.jpg")
+```
+
+.footnote[
+韩国学者编写。附带stata代码（参看[google个人站点](https://sites.google.com/site/mjleeku/data-and-gaussstata-programs-for-2016-book-oup)）。
+
+]
+
+---
+
 ### 参考教材《精通"测度"：原因-效果路径》
 
 - Angrist J D, Pischke J-S.  Mastering ’Metrics: The Path from Cause to Effect[M]. Princeton, Oxford: Princeton University Press, 2015.
@@ -314,7 +339,7 @@ include_graphics("../pic/chpt00-text-IE-cover.jpg")
 
 ---
 
-## 在线资源
+## 在线资源：政策评估相关
 
 
 在线learning sources:
@@ -324,6 +349,13 @@ include_graphics("../pic/chpt00-text-IE-cover.jpg")
 - "Chapter 12 Regression Discontinuity: Looking for Jumps in Data" （[see](https://bookdown.org/carillitony/bailey/chp11.html#same-slope)）
 
 - 在线课程"program evaluation"。[课程网址](https://evalsp20.classes.andrewheiss.com/schedule/)。chapter Regression discontinuity I & II（[链接](https://evalsp20.classes.andrewheiss.com/class/11-class/)）。有视频有R案例和代码。
+
+
+---
+
+## 在线资源：DID相关
+
+- DID的资源[汇集](https://asjadnaqvi.github.io/DiD/)，能否打开网页根据你的网络环境而定
 
 
 ---

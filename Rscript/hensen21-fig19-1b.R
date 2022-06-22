@@ -78,6 +78,11 @@ m5 <- beta5[1]+beta5[2]*x0[5]
 x5 <- as.matrix(subset(x,(x>=8)))
 f5 <- beta5[1]+x5*beta5[2]
 
+tbl_a0 <- cbind(beta1, beta2,beta3, beta4,beta5) %>%
+  as_tibble(.name_repair = "unique") %>%
+  rename_all(~paste0("bd",1:5)) %>%
+  add_column(par= c("intercept", "slope"), .before = "bd1")
+
 m0 <- c(m1,m2,m3,m4,m5)
 f0 <- c(f1, f2,f3, f4, f5)
 
@@ -93,7 +98,8 @@ tbl_result <- tibble(id = 1:length(x),
   ) %>%
   mutate(lft = x-h1,
          rgt = x +h1,
-         bins = str_c('[',lft,',',rgt, ')')) %>%
+         bins = str_c('[',number(lft,0.01),',',
+                      number(rgt,0.01), ')')) %>%
   mutate(my = rep(m0, times=c(200,200,200,200,201)),
          m0 = (as.vector(f0)),
          m1 = (as.vector(mr)),

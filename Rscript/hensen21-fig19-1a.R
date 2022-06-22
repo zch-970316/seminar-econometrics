@@ -115,7 +115,7 @@ tbl_m2 <- tbl_match %>%
 
 #### draw plot ####
 
-# basic plot
+# basic scatter plot
 p0 <- ggplot() +
   geom_point(aes(X, Y),data = dt, pch=21) +
   labs(x= "自变量X", y ="因变量Y") +
@@ -123,6 +123,7 @@ p0 <- ggplot() +
   scale_y_continuous(breaks = seq(-1,2,0.5), limits = c(-1,2)) +
   theme_bw()
 
+### basic with bins
 p00 <- p0 +
   geom_vline(xintercept = x0, lty="dashed") +
   geom_point(aes(X, Y, color=as.factor(bd)),
@@ -134,11 +135,17 @@ p00 <- p0 +
             alpha = 0.05, inherit.aes = FALSE) +
   theme(legend.position = "none")
 
+### basic with means
+p000 <- p00 +
+  geom_point(aes(x, m0),
+             data = tbl_m0 %>% select(x, m0) %>% unique(), 
+             pch=15, color="black", size=3)
+
 ### binned plot
 p1 <- p00 +
   geom_point(aes(x, m0),
              data = tbl_m0 %>% select(x, m0) %>% unique(), 
-             pch=15, color="black") +
+             pch=15, color="black", size=3) +
   geom_segment(aes(x =lwr, xend=upr,
                    y =m0, yend = m0,
                    color=as.factor(bd)),
@@ -147,6 +154,12 @@ p1 <- p00 +
   theme(legend.position = "none")
 
 ## scrolling  plot
+
+p20 <- p0 +
+  geom_point(aes(x, m1, color=as.factor(bd)),
+             data = tbl_m1 %>% select(x,m1,bins,bd) %>% unique(),
+             pch=20) +
+  theme(legend.position = "none")
 
 p2 <- p0 +
   geom_point(aes(x, m0),
