@@ -12,7 +12,7 @@ y <- sin((x-2)*a)/((x-2)*a) + rnorm(n)/4
 
 dt <- tibble(X=x, Y=y)
 
-## basic plot
+#### basic plot ####
 p0 <- ggplot() +
   geom_point(aes(X, Y),data = dt, pch=21) +
   labs(x= "自变量X", y ="因变量Y") +

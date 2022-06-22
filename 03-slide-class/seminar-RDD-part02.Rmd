@@ -89,9 +89,7 @@ name:chapter-RDD
 
 ### [3.估计效果(Performance Analysis)](#performance)
 
-### 4.谱宽选择(Bandwidth Selection)
-
-### 5.群组分析(Cluster observations)
+### [4.群组分析(Cluster observations)](#cluster)
 
 
 ---
@@ -1410,6 +1408,8 @@ name: performance
 
 ### [3.6 方差估计(Variance Estimation)](#var-est)
 
+### [3.7 工资案例](#case-wage)
+
 ---
 layout: true
 
@@ -1843,9 +1843,7 @@ $\operatorname{IMSE}_{n}(h)$也将是等价的，二者各自得到的谱宽也�
 另外，为了避免谱宽值选择过小，需要给定约束条件
 $h \geq h_{\ell}$，此时：
 
-$$
-h_{\mathrm{CV}}=\underset{h \geq h_{\ell}}{\operatorname{argmin}} \mathrm{CV}(h)
-$$
+$$h_{\mathrm{CV}}=\underset{h \geq h_{\ell}}{\operatorname{argmin}} \mathrm{CV}(h)$$
 
 ---
 
@@ -1858,9 +1856,7 @@ $h$的序贯数值（grid value）
 $[h_1, h_2, \cdots, h_J]$，并评估交叉效用准则函数的最小化取值
 $CV(h_j),j\in(1,2,\cdots,J)$，从而得到最优谱宽：
 
-$$
-h_{\mathrm{CV}}=\underset{h \in\left[h_{1}, h_{2}, \ldots, h_{J}\right]}{\operatorname{argmin}} \operatorname{CV}(h)
-$$
+$$h_{\mathrm{CV}}=\underset{h \in\left[h_{1}, h_{2}, \ldots, h_{J}\right]}{\operatorname{argmin}} \operatorname{CV}(h)$$
 .fyi[
 
 - 需要注意的是，以上方法得到的谱宽理论上可以是无界化的。意味着，交叉验证准则函数
@@ -2179,20 +2175,412 @@ $$\begin{align}
 **逐点置信区间**（Pointwise Conﬁdence Interval）
 
 $$\begin{align}
-\widehat{m}(x) \pm t_{1-\alpha/2}(n-1) \cdot \sqrt{\widehat{V}_{\widehat{m}(x)}}\\
+\widehat{m}(x) \pm z_{1-\alpha/2}(n-1) \cdot \sqrt{\widehat{V}_{\widehat{m}(x)}}\\
+\widehat{m}(x) \pm 1.96 \sqrt{\widehat{V}_{\widehat{m}(x)}}
+\end{align}$$
+
+
+
+---
+exclude: true
+
+## Code script: Hensen bruce fig 19-5
+
+- 此代码仅用于生成本地图片，为提高渲染效率代码文件仅需运行一次。
+
+- 如更新代码，请更改`eval = TRUE`
+
+```{r, eval=TRUE}
+source("../Rscript/hensen21-fig19-5.R", encoding = "UTF-8")
+```
+
+
+---
+name: case-wage
+
+### 3.7 工资案例：背景说明
+
+.case[
+
+**工资案例**：
+
+- 案例基于CPS数据集，重点分析其中的**子样本数据**（黑人、男性、拥有12年受教育程度——高中毕业），样本数为n=`r n`。
+
+- 关注的问题：**时均工资**的对数（`Y
+=log(wage)`）对**职业经历**（`X=experience`）的非参数回归估计。
+
+- 后面的分析中，我们会重点划定观测窗口为：职业经历（年数）范围为
+$[0,40]$。因为样本中90\%以上的观测对象都落在这个范围之内。
+
+]
+
+
+
+---
+
+### （工资案例）样本数据集
+
+
+.pull-left[
+
+```{r}
+dt_cps1 %>%
+  add_column(obs = 1:nrow(.), .before = "X") %>%
+  DT::datatable(
+    caption = paste0("CPS数据集(n=",n,")"),
+    options = list(dom = "tip", pageLength =8))%>%
+  formatRound(c(3), digits = 4)
+```
+
+]
+
+.pull-right[
+
+- 样本数据的描述性统计如下：
+
+```{r}
+summary(dt_cps1)
+```
+
+]
+
+
+---
+
+### （工资案例）样本数据散点图
+
+```{r}
+#| out.height = 450
+
+p0
+```
+
+
+---
+
+### （工资案例）参考谱宽的计算：多项式回归
+
+下面我们按前述步骤来计算参考谱宽值
+$h_{rot}$：
+
+- **步骤1**：根据案例数据集，设定权重取值范围
+$\left\{\xi_{1} \leq x \leq \xi_{2}\right\}=\{0,40\}$
+
+- **步骤2**：构建多项式回归
+
+```{r, results="asis"}
+varx <- c("X","X^2","X^3","X^4")
+lx_out <- xmerit::lx.psm(x = varx, n.row = 5)
+```
+
+> 直接使用OLS进行估计，得到估计方程：
+
+```{r, results="asis"}
+mod_poly <- formula("Y~X +I(X^2) +I(X^3) +I(X^4)" )
+lx_est <- xmerit::lx.est(lm.mod = mod_poly, 
+                         lm.dt = dt_cps1, lm.n = 5,
+                         opt = c("s"),
+                         digits = c(6,4,2,4))
+
+```
+
+> 进而得到拟合值
+$\widehat{m}(x)$及其二阶导
+$\widehat{m}^{\prime \prime}(x)$及残差
+$\hat{\epsilon}$
+
+$$\begin{align}
+\widehat{m}(x)
+&=2.094395+0.030951x_i-0.000103x^2_i-0.000021x^3_i+0.000000x^4_i \\ 
+\widehat{m}^{\prime \prime}(x)
+&=-2\times0.000103-6\times0.000021x_i+12\times0.000000x^2_i \\ 
+\end{align}$$
+
+---
+
+### （工资案例）参考谱宽的计算：结果
+
+
+- 步骤3：利用上述估计结果计算
+
+$$\begin{align}
+\widehat{B}=\frac{1}{n} \sum_{i=1}^{n}\left(\frac{1}{2} \hat{m}^{\prime \prime}\left(X_{i}\right)\right)^{2} \mathbb{1}\left\{\xi_{1} \leq X_{i} \leq \xi_{2}\right\}
+= `r number(b,0.00000001)`
+\end{align}$$
+
+- 步骤4：多项式模型的回归误差方差
+
+$$\hat{\sigma}^2 = \frac{\sum{\hat{\epsilon}^2}}{n-q-1}=`r number(sig, 0.0001)`$$
+
+- 步骤5：根据上述全部结果计算得到经验谱宽：
+
+$$\begin{align}
+h_{\text {rot }}&=0.58\left(\frac{\widehat{\sigma}^{2}\left(\xi_{2}-\xi_{1}\right)}{n \widehat{B}}\right)^{1 / 5}  = 0.58 \times \left(\frac{`r number(sig,0.0001)`\times \left(40-0\right)}{`r n` \times `r number(b,0.000000001)`}\right)^{1 / 5} 
+= `r number(hrot,0.0001)`
+\end{align}$$
+
+
+---
+
+### （工资案例）交叉验证谱宽的计算：规则
+
+- 步骤1：设定**经验谱宽**
+$h_{rot}=`r number(hrot,0.0001)`$作为**初始值**。。
+
+- 步骤2：设定**调参谱宽**（tuning bandwidth）。
+> 
+- 一个经验谱宽范围可供参考：
+$[h_{rot}/3, 3h_{rot}]=[`r number(hrot/3,0.0001)`, `r number(3*hrot,0.0001)`]$。
+- 给定范围内的搜寻总数为
+$n=`r hn`$。则待评估序贯值为
+$h\in (`r paste0(number(hh[1:5],0.0001), collapse=', ')`, \cdots,`r paste0(number(hh[(hn-3):hn],0.0001), collapse=', ')`)$。
+
+
+---
+
+### （工资案例）交叉验证谱宽的计算：CV计算表
+
+```{r}
+tb_cvc %>%
+  add_column(id = 1:nrow(.), .before = "h_tune") %>%
+  DT::datatable(caption = "LL方法下的CV计算表",
+                options = list(dom ="tip", pageLength =8)) %>%
+  formatRound(c(2:3), digits = 4)
+```
+
+---
+
+### （工资案例）交叉验证谱宽的计算：谱宽与CV变化
+
+```{r}
+#| out.height = 450
+p_cvc
+```
+
+---
+
+### （工资案例）最优谱宽选择下的估计表
+
+
+```{r}
+tb_mxh %>%
+  add_column(index = 1:nrow(.), .before = "xg") %>%
+  rename("mx_rot"='mx1', "mx_cv"='mx2') %>%
+  DT::datatable(caption = "使用不同谱宽下LL方法对m(x)的估计结果",
+                options = list(dom ="tip", pageLength =8)) %>%
+  formatRound(c(2,3:4), digits = c(2,4,4))
+```
+
+
+
+---
+
+### （工资案例）LL方法下使用ROT谱宽估计得到的m(x)
+
+```{r}
+#| out.height = 450
+p_mxh1
+```
+
+---
+
+### （工资案例）LL方法下使用最优CV谱宽估计得到的m(x)
+
+```{r}
+#| out.height = 450
+p_mxh2
+```
+
+---
+
+### （工资案例）LL方法下使用不同谱宽估计得到的m(x)：对比
+
+```{r}
+#| out.height = 450
+p_mxh
+```
+
+
+---
+exclude: true
+
+## Code script: Hensen bruce fig 19-6
+
+- 此代码仅用于生成本地图片，为提高渲染效率代码文件仅需运行一次。
+
+- 如更新代码，请更改`eval = TRUE`
+
+```{r, eval=TRUE}
+source("../Rscript/hensen21-fig19-6.R", encoding = "UTF-8")
+```
+
+
+---
+
+### （工资案例）方差估计：获得预测残差
+
+（1）我们首先可以计算得到LL估计下的预测残差的平方
+$\tilde{e}^2_i$
+
+- 这一步可以直接采用前述的参考谱宽
+$h_{rot}=`r number(hrot,0.0001)`$
+
+---
+
+### （工资案例）方差估计：再次获得参考谱宽
+
+（2）然后开始计算方差估计下的最优谱宽。这里我们再进行一次参考谱宽的计算流程。
+
+- 构建残差平方的多项式回归模型
+
+$$\begin{align}
+\begin{split}
+\tilde{e}^2_i=&+\gamma_{0}+\gamma_{1}X_i+\gamma_{2}X^2_i+\gamma_{3}X^3_i+\gamma_{4}X^4_i+v_i
+\end{split}
+\end{align}$$
+
+- 利用ROT公式流程，再次获得参考谱宽
+
+$$\begin{align}
+hv_{\text {rot }}&=0.58\left(\frac{\widehat{\sigma}^{2}\left(\xi_{2}-\xi_{1}\right)}{n \widehat{B}}\right)^{1 / 5}  = 0.58 \times \left(\frac{`r number(sig,0.0001)`\times \left(40-0\right)}{`r n` \times `r number(b,0.000000001)`}\right)^{1 / 5} 
+= `r number(hrotv,0.0001)`
+\end{align}$$
+
+---
+
+### （工资案例）方差估计：再次获得最优交叉验证谱宽
+
+（3）然后开始计算方差估计下的最优谱宽。这里我们再进行一次参考谱宽的计算流程。
+
+- 步骤1：设定**经验谱宽**
+$hv_{rot}=`r number(hrotv,0.0001)`$作为**初始值**。。
+
+- 步骤2：设定**调参谱宽**（tuning bandwidth）。
+> 
+- 一个经验谱宽范围可供参考：
+$[`r number(h1,0.1)`, `r number(h2,0.1)`]$。
+- 给定范围内的搜寻总数为
+$n=`r hn`$。则待评估序贯值为
+$h\in (`r paste0(number(hh[1:5],0.0001), collapse=', ')`, \cdots,`r paste0(number(hh[(hn-3):hn],0.0001), collapse=', ')`)$。
+
+- 步骤3：采用交叉验证**留一法**，分别遍历计算**NW估计**和**LL估计**下的全部CV值（见后面计算表）
+
+- 步骤4：最小CV值对应的谱宽评估值，则为最优交叉验证谱宽。当然，我们最终发现**NW估计**和**LL估计**下的结果是一样的，都选择了最大边界值
+$hv_{CV}(NW)=hv_{CV}(LL)=`r number(hLLV)`$。（见后面的CV比较图）
+
+
+---
+
+### （工资案例）方差估计：CV值计算表（附表）
+
+
+```{r}
+tbl_cvcv %>%
+  add_column(id = 1:nrow(.), .before = "h_tune") %>%
+  DT::datatable(caption = "NW和LL方法下的CV计算表",
+                options = list(dom ="tip", pageLength =8)) %>%
+  formatRound(c(2:4), digits = 4)
+```
+
+---
+
+### （工资案例）方差估计：CV值与谱宽（附图）
+
+```{r}
+#| out.height = 450
+p_cvcv
+```
+
+- LL估计的CV值在局部上具有最小值，也即局部最优谱宽约为
+$hv_{cv}(LL)\simeq 5$
+
+- 但是从全局来看，无论是NW估计，还是LL估计，CV函数值都表现为下降趋势。因此它们都选择了最大边界值
+$hv_{CV}(NW)=hv_{CV}(LL)=`r number(hLLV)`$。
+
+---
+
+### （工资案例）方差估计：计算方差、标准差
+
+（4）利用前面的平方预测误差，并使用谱宽
+$h=`r number(hrot,0.0001)`$进行LL估计，最终得到方差和标准差估计值（见后面附表）。
+
+$$\begin{align}
+\widehat{\boldsymbol{V}}_{\widehat{\beta}}(x)=\left(\boldsymbol{Z}^{\prime} \boldsymbol{K} \boldsymbol{Z}\right)^{-1}\left(\sum_{i=1}^{n} K\left(\frac{X_{i}-x}{h}\right)^{2} Z_{i}(x) Z_{i}(x)^{\prime} \widetilde{\boldsymbol{e}}_{i}^{2}\right)\left(\boldsymbol{Z}^{\prime} \boldsymbol{K} \boldsymbol{Z}\right)^{-1}
+\end{align}$$
+
+
+---
+
+### （工资案例）方差估计：计算方差估计值（附表）
+
+
+```{r}
+tbl_band %>%
+  add_column(id = 1:nrow(.), .before = "xg") %>%
+  DT::datatable(caption = "LL方法下的方差和标准差、置信区间",
+                options = list(dom ="tip", pageLength =8)) %>%
+  formatRound(c(3:7), digits = 4)
+```
+
+
+---
+
+### （工资案例）置信区间和置信带
+
+（5）进一步计算**逐点置信区间**（Pointwise Conﬁdence Interval）（见前面附表），并得到置信带（见后面附图）。
+
+$$\begin{align}
+\widehat{m}(x) \pm z_{1-\alpha/2}(n-1) \cdot \sqrt{\widehat{V}_{\widehat{m}(x)}}\\
 \widehat{m}(x) \pm 1.96 \sqrt{\widehat{V}_{\widehat{m}(x)}}
 \end{align}$$
 
 ---
 
-### （工资案例）：
+### （工资案例）方差估计：置信区间和置信带（附图）
+
+```{r}
+#| out.height = 450
+p_band
+```
+
+
+---
+layout: false
+class: center, middle, duke-orange,hide_logo
+name: cluster
+
+# 4.群组分析(Cluster observations)
+
+### [4.1 基本原理](#basic-principal)
+
+### [4.2 成绩案例](#case-score)
 
 
 
 ---
+layout: true
 
-### （工资案例）：
+<div class="my-header-h2"></div>
 
+<div class="watermark1"></div>
+
+<div class="watermark2"></div>
+
+<div class="watermark3"></div>
+
+<div class="my-footer"><span>huhuaping@  &emsp;&emsp; <a href="#chapter-RDD">  </a>
+&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
+<a href="#cluster"> 4.群组分析(Cluster observations) </a> </span></div> 
+
+---
+name: basic-principal
+
+### 4.1 基本原理
+
+---
+name: case-score
+
+### 4.2 成绩案例
 
 ---
 layout: false
