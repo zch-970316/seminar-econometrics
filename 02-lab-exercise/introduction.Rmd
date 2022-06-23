@@ -1,0 +1,20 @@
+
+\mainmatter
+
+# 背景资料 {#background-info}
+
+
+```{r , echo=F,message=FALSE,warning=F}
+source(here::here("R/set-global.R"), encoding = "UTF-8")
+source(here::here("R/load-pkg.R"), encoding = "UTF-8")
+
+```
+
+
+先介绍一下课程
+
+
+## 参考文献{-}
+
+<div id="refs"></div>
+
